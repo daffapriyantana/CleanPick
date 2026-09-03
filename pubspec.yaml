@@ -1,0 +1,26 @@
+name: cleanpick
+description: "CleanPick - Aplikasi layanan pengangkutan sampah (Milestone 3: State Management Modern & Clean Architecture)"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^8.1.5
+  equatable: ^2.0.5
+  intl: ^0.19.0
+  uuid: ^4.4.0
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  bloc_test: ^9.1.7
+  mocktail: ^1.0.3
+
+flutter:
+  uses-material-design: true

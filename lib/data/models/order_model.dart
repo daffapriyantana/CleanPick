@@ -1,0 +1,78 @@
+import '../../core/constants/app_constants.dart';
+import '../../domain/entities/order_entity.dart';
+
+class OrderModel extends OrderEntity {
+  const OrderModel({
+    required super.id,
+    required super.wasteType,
+    required super.weightKg,
+    required super.address,
+    required super.pickupDate,
+    required super.vehicleType,
+    required super.baseFee,
+    required super.distanceFee,
+    required super.weightFee,
+    required super.totalPrice,
+    required super.status,
+    required super.paymentStatus,
+    required super.createdAt,
+    super.note,
+    super.officerName,
+  });
+
+  factory OrderModel.fromJson(Map<String, dynamic> json) {
+    return OrderModel(
+      id: json['id'] as String,
+      wasteType: WasteType.values[json['wasteType'] as int],
+      weightKg: (json['weightKg'] as num).toDouble(),
+      address: json['address'] as String,
+      pickupDate: DateTime.parse(json['pickupDate'] as String),
+      vehicleType: VehicleType.values[json['vehicleType'] as int],
+      baseFee: (json['baseFee'] as num).toDouble(),
+      distanceFee: (json['distanceFee'] as num).toDouble(),
+      weightFee: (json['weightFee'] as num).toDouble(),
+      totalPrice: (json['totalPrice'] as num).toDouble(),
+      status: OrderStatus.values[json['status'] as int],
+      paymentStatus: PaymentStatus.values[json['paymentStatus'] as int],
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      note: json['note'] as String?,
+      officerName: json['officerName'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'wasteType': wasteType.index,
+        'weightKg': weightKg,
+        'address': address,
+        'pickupDate': pickupDate.toIso8601String(),
+        'vehicleType': vehicleType.index,
+        'baseFee': baseFee,
+        'distanceFee': distanceFee,
+        'weightFee': weightFee,
+        'totalPrice': totalPrice,
+        'status': status.index,
+        'paymentStatus': paymentStatus.index,
+        'createdAt': createdAt.toIso8601String(),
+        'note': note,
+        'officerName': officerName,
+      };
+
+  factory OrderModel.fromEntity(OrderEntity e) => OrderModel(
+        id: e.id,
+        wasteType: e.wasteType,
+        weightKg: e.weightKg,
+        address: e.address,
+        pickupDate: e.pickupDate,
+        vehicleType: e.vehicleType,
+        baseFee: e.baseFee,
+        distanceFee: e.distanceFee,
+        weightFee: e.weightFee,
+        totalPrice: e.totalPrice,
+        status: e.status,
+        paymentStatus: e.paymentStatus,
+        createdAt: e.createdAt,
+        note: e.note,
+        officerName: e.officerName,
+      );
+}
