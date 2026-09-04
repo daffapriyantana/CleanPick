@@ -19,6 +19,28 @@ abstract class OrderRepository {
     String? note,
   });
 
+  Future<OrderEntity> createOrderWithDetails({
+    required WasteType wasteType,
+    required double weightKg,
+    required String address,
+    required DateTime pickupDate,
+    required VehicleType vehicleType,
+    String? note,
+    String? photoPath,
+    double? latitude,
+    double? longitude,
+    PaymentMethod paymentMethod = PaymentMethod.codTunai,
+    double distanceKm = 0,
+  }) =>
+      createOrder(
+        wasteType: wasteType,
+        weightKg: weightKg,
+        address: address,
+        pickupDate: pickupDate,
+        vehicleType: vehicleType,
+        note: note,
+      );
+
   Future<OrderEntity> cancelOrder(String orderId);
 
   Future<OrderEntity> payOrder(String orderId);

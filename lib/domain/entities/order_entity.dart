@@ -17,6 +17,10 @@ class OrderEntity extends Equatable {
   final DateTime createdAt;
   final String? note;
   final String? officerName;
+  final String? photoPath;
+  final double? latitude;
+  final double? longitude;
+  final PaymentMethod paymentMethod;
 
   const OrderEntity({
     required this.id,
@@ -34,12 +38,20 @@ class OrderEntity extends Equatable {
     required this.createdAt,
     this.note,
     this.officerName,
+    this.photoPath,
+    this.latitude,
+    this.longitude,
+    this.paymentMethod = PaymentMethod.codTunai,
   });
 
   OrderEntity copyWith({
     OrderStatus? status,
     PaymentStatus? paymentStatus,
     String? officerName,
+    String? photoPath,
+    double? latitude,
+    double? longitude,
+    PaymentMethod? paymentMethod,
   }) {
     return OrderEntity(
       id: id,
@@ -57,6 +69,10 @@ class OrderEntity extends Equatable {
       createdAt: createdAt,
       note: note,
       officerName: officerName ?? this.officerName,
+      photoPath: photoPath ?? this.photoPath,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
     );
   }
 
@@ -77,5 +93,9 @@ class OrderEntity extends Equatable {
         createdAt,
         note,
         officerName,
+        photoPath,
+        latitude,
+        longitude,
+        paymentMethod,
       ];
 }

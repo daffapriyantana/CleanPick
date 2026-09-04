@@ -40,10 +40,34 @@ class _FakeOrderRepository implements OrderRepository {
   }
 
   @override
+  Future<OrderEntity> createOrderWithDetails({
+    required WasteType wasteType,
+    required double weightKg,
+    required String address,
+    required DateTime pickupDate,
+    required VehicleType vehicleType,
+    String? note,
+    String? photoPath,
+    double? latitude,
+    double? longitude,
+    PaymentMethod paymentMethod = PaymentMethod.codTunai,
+    double distanceKm = 0,
+  }) =>
+      createOrder(
+        wasteType: wasteType,
+        weightKg: weightKg,
+        address: address,
+        pickupDate: pickupDate,
+        vehicleType: vehicleType,
+        note: note,
+      );
+
+  @override
   Future<OrderEntity> cancelOrder(String orderId) => throw UnimplementedError();
 
   @override
-  Future<OrderEntity> getOrderDetail(String orderId) => throw UnimplementedError();
+  Future<OrderEntity> getOrderDetail(String orderId) =>
+      throw UnimplementedError();
 
   @override
   Future<List<OrderEntity>> getOrders() => throw UnimplementedError();
@@ -118,7 +142,8 @@ void main() {
       );
     });
 
-    test('Test 4d - ditolak ketika tanggal pengangkutan tidak dipilih', () async {
+    test('Test 4d - ditolak ketika tanggal pengangkutan tidak dipilih',
+        () async {
       expect(
         () => usecase(
           wasteType: WasteType.organik,

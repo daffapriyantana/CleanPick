@@ -18,6 +18,11 @@ class CreateOrder {
     required DateTime? pickupDate,
     required VehicleType vehicleType,
     String? note,
+    String? photoPath,
+    double? latitude,
+    double? longitude,
+    PaymentMethod paymentMethod = PaymentMethod.codTunai,
+    double distanceKm = 0,
   }) async {
     if (wasteType == null) {
       throw const ValidationFailure('Jenis sampah wajib dipilih');
@@ -32,13 +37,18 @@ class CreateOrder {
       throw const ValidationFailure('Tanggal pengangkutan wajib dipilih');
     }
 
-    return repository.createOrder(
+    return repository.createOrderWithDetails(
       wasteType: wasteType,
       weightKg: weightKg,
       address: address,
       pickupDate: pickupDate,
       vehicleType: vehicleType,
       note: note,
+      photoPath: photoPath,
+      latitude: latitude,
+      longitude: longitude,
+      paymentMethod: paymentMethod,
+      distanceKm: distanceKm,
     );
   }
 }

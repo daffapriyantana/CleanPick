@@ -1,5 +1,6 @@
 import '../../core/constants/app_constants.dart';
 import '../../core/error/failures.dart';
+import 'dart:math' as math;
 
 /// Result of a price calculation, broken down so the UI can show a
 /// rincian biaya (fee breakdown) exactly like the design mockups.
@@ -25,6 +26,21 @@ class OrderPriceResult {
 /// - total = (weight * ratePerKg) + vehicle base fee + distance fee.
 class CalculateOrderPrice {
   const CalculateOrderPrice();
+
+  double distanceFromDepot(
+      {required double latitude, required double longitude}) {
+    const earthRadiusKm = 6371.0;
+    final lat1 = latitude * math.pi / 180;
+    const lat2 = kCleanPickDepotLatitude * math.pi / 180;
+    final deltaLat = (kCleanPickDepotLatitude - latitude) * math.pi / 180;
+    final deltaLon = (kCleanPickDepotLongitude - longitude) * math.pi / 180;
+    final a = math.sin(deltaLat / 2) * math.sin(deltaLat / 2) +
+        math.cos(lat1) *
+            math.cos(lat2) *
+            math.sin(deltaLon / 2) *
+            math.sin(deltaLon / 2);
+    return earthRadiusKm * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  }
 
   OrderPriceResult call({
     required double weightKg,
