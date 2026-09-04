@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/theme/app_theme.dart';
 import '../bloc/auth/auth_cubit.dart';
 import '../bloc/auth/auth_state.dart';
+import 'petugas_orders_page.dart';
 
 class PetugasDashboardPage extends StatefulWidget {
   const PetugasDashboardPage({super.key});
@@ -25,94 +26,102 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
-        child: Column(
-          children: [
-            _Header(name: name, id: id),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _SectionTitle('Ringkasan Hari Ini'),
-                    const SizedBox(height: 10),
-                    const Row(
-                      children: [
-                        Expanded(
-                            child: _StatisticCard(
-                                label: 'Hari Ini',
-                                value: '5',
-                                caption: 'Pesanan')),
-                        SizedBox(width: 8),
-                        Expanded(
-                            child: _StatisticCard(
-                                label: 'Selesai',
-                                value: '3',
-                                caption: 'Penjemputan')),
-                        SizedBox(width: 8),
-                        Expanded(
-                            child: _StatisticCard(
-                                label: 'Pendapatan',
-                                value: 'Rp 175rb',
-                                caption: 'Dari Petugas')),
-                      ],
+        child: _selectedIndex == 1
+            ? PetugasOrdersView(onMessage: _showMessage)
+            : Column(
+                children: [
+                  _Header(name: name, id: id),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const _SectionTitle('Ringkasan Hari Ini'),
+                          const SizedBox(height: 10),
+                          const Row(
+                            children: [
+                              Expanded(
+                                  child: _StatisticCard(
+                                      label: 'Hari Ini',
+                                      value: '5',
+                                      caption: 'Pesanan')),
+                              SizedBox(width: 8),
+                              Expanded(
+                                  child: _StatisticCard(
+                                      label: 'Selesai',
+                                      value: '3',
+                                      caption: 'Penjemputan')),
+                              SizedBox(width: 8),
+                              Expanded(
+                                  child: _StatisticCard(
+                                      label: 'Pendapatan',
+                                      value: 'Rp 175rb',
+                                      caption: 'Dari Petugas')),
+                            ],
+                          ),
+                          const SizedBox(height: 22),
+                          const _SectionTitle('Pesanan Aktif'),
+                          const SizedBox(height: 10),
+                          _ActivePickupCard(
+                              onDetail: () =>
+                                  _showMessage('Detail pesanan Siti Rahma')),
+                          const SizedBox(height: 22),
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _SectionTitle('Pesanan Masuk'),
+                              _Pill(
+                                  label: '2 Baru',
+                                  background: Color(0xFFFEE2E2),
+                                  foreground: AppColors.error),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          _IncomingOrderCard(
+                            name: 'Budi Santoso',
+                            time: '5 menit yang lalu',
+                            distance: '2.3 km',
+                            address: 'Jl. Pondok Indah Mall, Area Pickup Utara',
+                            chips: const [
+                              ('Plastik', Color(0xFFDBEAFE), Color(0xFF2563EB)),
+                              ('Kertas', Color(0xFFFEF3C7), Color(0xFFD97706)),
+                              ('Pickup', Color(0xFFDCFCE7), Color(0xFF15803D))
+                            ],
+                            price: 'Rp 45.000',
+                            onAction: _showMessage,
+                          ),
+                          const SizedBox(height: 10),
+                          _IncomingOrderCard(
+                            name: 'Dewi Lestari',
+                            time: '10 menit yang lalu',
+                            distance: '4.1 km',
+                            address: 'Jl. Melati Indah No. 12, Cilandak',
+                            chips: const [
+                              ('Organik', Color(0xFFDCFCE7), Color(0xFF15803D)),
+                              (
+                                'Motor Tiga',
+                                Color(0xFFF3E8FF),
+                                Color(0xFF7E22CE)
+                              )
+                            ],
+                            price: 'Rp 30.000',
+                            onAction: _showMessage,
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 22),
-                    const _SectionTitle('Pesanan Aktif'),
-                    const SizedBox(height: 10),
-                    _ActivePickupCard(
-                        onDetail: () =>
-                            _showMessage('Detail pesanan Siti Rahma')),
-                    const SizedBox(height: 22),
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _SectionTitle('Pesanan Masuk'),
-                        _Pill(
-                            label: '2 Baru',
-                            background: Color(0xFFFEE2E2),
-                            foreground: AppColors.error),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    _IncomingOrderCard(
-                      name: 'Budi Santoso',
-                      time: '5 menit yang lalu',
-                      distance: '2.3 km',
-                      address: 'Jl. Pondok Indah Mall, Area Pickup Utara',
-                      chips: const [
-                        ('Plastik', Color(0xFFDBEAFE), Color(0xFF2563EB)),
-                        ('Kertas', Color(0xFFFEF3C7), Color(0xFFD97706)),
-                        ('Pickup', Color(0xFFDCFCE7), Color(0xFF15803D))
-                      ],
-                      price: 'Rp 45.000',
-                      onAction: _showMessage,
-                    ),
-                    const SizedBox(height: 10),
-                    _IncomingOrderCard(
-                      name: 'Dewi Lestari',
-                      time: '10 menit yang lalu',
-                      distance: '4.1 km',
-                      address: 'Jl. Melati Indah No. 12, Cilandak',
-                      chips: const [
-                        ('Organik', Color(0xFFDCFCE7), Color(0xFF15803D)),
-                        ('Motor Tiga', Color(0xFFF3E8FF), Color(0xFF7E22CE))
-                      ],
-                      price: 'Rp 30.000',
-                      onAction: _showMessage,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
       bottomNavigationBar: _BottomNavigation(
         selectedIndex: _selectedIndex,
         onSelected: (index) {
           setState(() => _selectedIndex = index);
-          if (index != 0) _showMessage('Menu ini segera tersedia');
+          if (index != 0 && index != 1) {
+            _showMessage('Menu ini segera tersedia');
+          }
         },
       ),
     );
