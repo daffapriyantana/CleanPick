@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_constants.dart';
 
 class PetugasOrderDetailPage extends StatefulWidget {
   final String customerName;
@@ -11,6 +15,10 @@ class PetugasOrderDetailPage extends StatefulWidget {
   final String vehicleFee;
   final String distanceFee;
   final String total;
+  final String? photoPath;
+  final double? latitude;
+  final double? longitude;
+  final PaymentMethod paymentMethod;
   final VoidCallback? onCompleted;
   final VoidCallback? onCancelled;
 
@@ -24,6 +32,10 @@ class PetugasOrderDetailPage extends StatefulWidget {
     required this.vehicleFee,
     required this.distanceFee,
     required this.total,
+    this.photoPath,
+    this.latitude,
+    this.longitude,
+    this.paymentMethod = PaymentMethod.codTunai,
     this.onCompleted,
     this.onCancelled,
   });
@@ -34,6 +46,7 @@ class PetugasOrderDetailPage extends StatefulWidget {
 
 class _PetugasOrderDetailPageState extends State<PetugasOrderDetailPage> {
   bool _cancellationRequested = false;
+  bool _codPaid = false;
   String? _cancellationReason;
 
   Future<void> _requestCancellation() async {
@@ -157,6 +170,26 @@ class _PetugasOrderDetailPageState extends State<PetugasOrderDetailPage> {
                               label: 'Kendaraan', value: widget.vehicleType)),
                     ],
                   ),
+                  if (widget.photoPath != null || widget.latitude != null) ...[
+                    const SizedBox(height: 12),
+                    if (widget.photoPath != null)
+                      const Text('Foto dari Customer', style: _captionText),
+                    if (widget.photoPath != null) ...[
+                      const SizedBox(height: 4),
+                      Image.file(File(widget.photoPath!),
+                          height: 110, fit: BoxFit.cover),
+                    ],
+                    if (widget.latitude != null &&
+                        widget.longitude != null) ...[
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () =>
+                            _openMap(widget.latitude!, widget.longitude!),
+                        icon: const Icon(Icons.map_outlined),
+                        label: const Text('Buka Lokasi Customer di Maps'),
+                      ),
+                    ],
+                  ],
                   const SizedBox(height: 12),
                   const Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,6 +217,31 @@ class _PetugasOrderDetailPageState extends State<PetugasOrderDetailPage> {
                       'Biaya Jarak (${widget.distance})', widget.distanceFee),
                   const Divider(height: 18),
                   _CostRow('Total Pendapatan', widget.total, emphasized: true),
+                  if (widget.paymentMethod.isCod) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _codPaid
+                                ? 'COD sudah dikonfirmasi lunas'
+                                : 'COD belum dibayar',
+                            style: TextStyle(
+                              color:
+                                  _codPaid ? AppColors.primary : Colors.orange,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        if (!_codPaid)
+                          TextButton(
+                            onPressed: () => setState(() => _codPaid = true),
+                            child: const Text('Konfirmasi Lunas'),
+                          ),
+                      ],
+                    ),
+                  ],
                   if (_cancellationRequested) ...[
                     const SizedBox(height: 10),
                     Text(
@@ -251,6 +309,15 @@ class _PetugasOrderDetailPageState extends State<PetugasOrderDetailPage> {
   void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _openMap(double latitude, double longitude) async {
+    final uri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
+        mounted) {
+      _showMessage(context, 'Aplikasi Maps tidak tersedia');
+    }
   }
 }
 
