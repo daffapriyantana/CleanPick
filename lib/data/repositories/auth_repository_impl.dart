@@ -9,9 +9,20 @@ class AuthRepositoryImpl implements AuthRepository {
   const AuthRepositoryImpl({required this.dataSource});
 
   @override
-  Future<UserEntity> login({required String email, required String password}) async {
+  Future<UserEntity> login(
+      {required String email, required String password}) async {
     try {
       return await dataSource.login(email: email, password: password);
+    } on AuthException catch (e) {
+      throw AuthFailure(e.message);
+    }
+  }
+
+  @override
+  Future<UserEntity> loginPetugas(
+      {required String id, required String password}) async {
+    try {
+      return await dataSource.loginPetugas(id: id, password: password);
     } on AuthException catch (e) {
       throw AuthFailure(e.message);
     }

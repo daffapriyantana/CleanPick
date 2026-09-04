@@ -3,6 +3,8 @@ import '../models/user_model.dart';
 
 abstract class AuthLocalDataSource {
   Future<UserModel> login({required String email, required String password});
+  Future<UserModel> loginPetugas(
+      {required String id, required String password});
   Future<UserModel> register({
     required String name,
     required String email,
@@ -29,20 +31,47 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     ),
   ];
 
+  final Map<String, String> _petugasPasswords = {'PTG-001': 'password123'};
+  final List<UserModel> _petugas = [
+    const UserModel(
+      id: 'PTG-001',
+      name: 'Ahmad',
+      email: 'ahmad@cleanpick.id',
+      phone: '081234567891',
+      address: 'Pool CleanPick, Jakarta',
+    ),
+  ];
+
   UserModel? _currentUser;
 
   @override
   UserModel? get currentUser => _currentUser;
 
   @override
-  Future<UserModel> login({required String email, required String password}) async {
+  Future<UserModel> login(
+      {required String email, required String password}) async {
     await Future.delayed(const Duration(milliseconds: 700));
     final normalizedEmail = email.trim().toLowerCase();
     final storedPassword = _passwords[normalizedEmail];
     if (storedPassword == null || storedPassword != password) {
       throw const AuthException('Email atau password salah');
     }
-    final user = _users.firstWhere((u) => u.email.toLowerCase() == normalizedEmail);
+    final user =
+        _users.firstWhere((u) => u.email.toLowerCase() == normalizedEmail);
+    _currentUser = user;
+    return user;
+  }
+
+  @override
+  Future<UserModel> loginPetugas(
+      {required String id, required String password}) async {
+    await Future.delayed(const Duration(milliseconds: 700));
+    final normalizedId = id.trim().toUpperCase();
+    final storedPassword = _petugasPasswords[normalizedId];
+    if (storedPassword == null || storedPassword != password) {
+      throw const AuthException('ID petugas atau password salah');
+    }
+    final user = _petugas.firstWhere((petugas) => petugas.id == normalizedId);
     _currentUser = user;
     return user;
   }

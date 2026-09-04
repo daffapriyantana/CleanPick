@@ -10,14 +10,11 @@ import '../bloc/auth/auth_state.dart';
 import '../bloc/order/order_cubit.dart';
 import '../bloc/order/order_state.dart';
 import '../widgets/loading_widget.dart';
-import '../widgets/status_badge.dart';
 import 'create_order_page.dart';
 import 'history_page.dart';
 import 'orders_page.dart';
 import 'profile_page.dart';
 
-/// Home shell with Bottom Navigation, matching the design's tab set:
-/// Beranda / Pesanan / Notifikasi(→ history) / Profil.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -32,22 +29,71 @@ class _HomePageState extends State<HomePage> {
     _HomeTab(),
     OrdersPage(embedded: true),
     HistoryPage(embedded: true),
-    ProfilePage(embedded: true),
+    ProfilePage(embedded: true)
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _index, children: _pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Beranda'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: 'Pesanan'),
-          NavigationDestination(icon: Icon(Icons.history_outlined), selectedIcon: Icon(Icons.history), label: 'Riwayat'),
-          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profil'),
-        ],
+      bottomNavigationBar: _BottomNav(
+          selectedIndex: _index,
+          onSelected: (index) => setState(() => _index = index)),
+    );
+  }
+}
+
+class _BottomNav extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+  const _BottomNav({required this.selectedIndex, required this.onSelected});
+
+  static const _items = [
+    (Icons.home_outlined, Icons.home, 'Beranda'),
+    (Icons.receipt_long_outlined, Icons.receipt_long, 'Pesanan'),
+    (Icons.notifications_none_outlined, Icons.notifications, 'Notifikasi'),
+    (Icons.person_outline, Icons.person, 'Profil'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        height: 68,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Color(0xFFE9EEEB))),
+          boxShadow: [
+            BoxShadow(
+                color: Color(0x12000000), blurRadius: 12, offset: Offset(0, -2))
+          ],
+        ),
+        child: Row(children: [
+          for (var i = 0; i < _items.length; i++)
+            Expanded(
+              child: InkWell(
+                onTap: () => onSelected(i),
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(i == selectedIndex ? _items[i].$2 : _items[i].$1,
+                          size: 20,
+                          color: i == selectedIndex
+                              ? AppColors.primary
+                              : const Color(0xFF9CA5A0)),
+                      const SizedBox(height: 4),
+                      Text(_items[i].$3,
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: i == selectedIndex
+                                  ? AppColors.primary
+                                  : const Color(0xFF9CA5A0))),
+                    ]),
+              ),
+            ),
+        ]),
       ),
     );
   }
@@ -55,7 +101,6 @@ class _HomePageState extends State<HomePage> {
 
 class _HomeTab extends StatefulWidget {
   const _HomeTab();
-
   @override
   State<_HomeTab> createState() => _HomeTabState();
 }
@@ -70,177 +115,374 @@ class _HomeTabState extends State<_HomeTab> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      top: false,
       child: RefreshIndicator(
         onRefresh: () => context.read<OrderCubit>().loadOrders(),
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Row(
-              children: [
-                const CircleAvatar(radius: 22, backgroundColor: AppColors.primary, child: Icon(Icons.person, color: Colors.white)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Halo, ${_greetName(context)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      const Text('Selamat datang kembali', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                    ],
-                  ),
-                ),
-                IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(18),
-              ),
+        child: ListView(padding: EdgeInsets.zero, children: [
+          _Header(name: _greetName(context), address: _userAddress(context)),
+          Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 20),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Pesan Pengambilan Sampah',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 4),
-                  const Text('Pesan jadwal penjemputan sekarang dan bantu lingkungan bersih.',
-                      style: TextStyle(color: Colors.white70, fontSize: 12)),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.primary),
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const CreateOrderPage()),
-                      ),
-                      child: const Text('Pesan Sekarang'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text('Kategori Sampah', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            const SizedBox(height: 10),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 2.6,
-              children: const [
-                _CategoryChip(label: 'Organik', icon: Icons.eco_outlined, color: Color(0xFF16A34A)),
-                _CategoryChip(label: 'Anorganik', icon: Icons.delete_outline, color: Color(0xFF3B82F6)),
-                _CategoryChip(label: 'B3 (Bahaya)', icon: Icons.warning_amber_outlined, color: Color(0xFFDC2626)),
-                _CategoryChip(label: 'Daur Ulang', icon: Icons.autorenew, color: Color(0xFFF5A524)),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Pesanan Aktif', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                TextButton(
-                  onPressed: () {
-                    final state = context.findAncestorStateOfType<_HomePageState>();
-                    state?.setState(() => state._index = 1);
-                  },
-                  child: const Text('Lihat Semua'),
-                ),
-              ],
-            ),
-            BlocBuilder<OrderCubit, OrderState>(
-              builder: (context, state) {
-                if (state is OrderLoading) return const Padding(padding: EdgeInsets.all(24), child: LoadingWidget());
-                if (state is OrdersLoaded) {
-                  final active = state.orders
-                      .where((o) => o.status != OrderStatus.selesai && o.status != OrderStatus.dibatalkan)
-                      .toList();
-                  if (active.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text('Belum ada pesanan aktif', style: TextStyle(color: AppColors.textSecondary)),
-                    );
-                  }
-                  return Column(children: active.map((o) => _ActiveOrderTile(order: o)).toList());
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-          ],
-        ),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _HeroCard(
+                        onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const CreateOrderPage()))),
+                    const SizedBox(height: 18),
+                    const _SectionTitle('Kategori Sampah'),
+                    const SizedBox(height: 9),
+                    const _CategoryGrid(),
+                    const SizedBox(height: 18),
+                    _SectionTitle('Pesanan Aktif',
+                        action: 'Menuju Lokasi', onAction: () => _selectTab(1)),
+                    const SizedBox(height: 8),
+                    BlocBuilder<OrderCubit, OrderState>(
+                        builder: (context, state) {
+                      if (state is OrderLoading) {
+                        return const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: LoadingWidget());
+                      }
+                      if (state is! OrdersLoaded) {
+                        return const SizedBox.shrink();
+                      }
+                      final active = state.orders
+                          .where((order) =>
+                              order.status != OrderStatus.selesai &&
+                              order.status != OrderStatus.dibatalkan)
+                          .toList();
+                      final recent = state.orders
+                          .where((order) => order.status == OrderStatus.selesai)
+                          .toList();
+                      return Column(children: [
+                        if (active.isEmpty)
+                          const _EmptyOrder(text: 'Belum ada pesanan aktif')
+                        else
+                          ...active
+                              .map((order) => _ActiveOrderCard(order: order)),
+                        const SizedBox(height: 18),
+                        _SectionTitle('Riwayat Terakhir',
+                            action: 'Lihat Semua',
+                            onAction: () => _selectTab(2)),
+                        const SizedBox(height: 8),
+                        if (recent.isEmpty)
+                          const _EmptyOrder(text: 'Belum ada riwayat pesanan')
+                        else
+                          _RecentOrderCard(order: recent.first),
+                      ]);
+                    }),
+                  ])),
+        ]),
       ),
     );
+  }
+
+  void _selectTab(int index) {
+    final homeState = context.findAncestorStateOfType<_HomePageState>();
+    homeState?.setState(() => homeState._index = index);
   }
 
   String _greetName(BuildContext context) {
-    final authState = context.read<AuthCubit>().state;
-    if (authState is AuthSuccess) return authState.user.name;
-    return 'Pelanggan';
+    final state = context.read<AuthCubit>().state;
+    return state is AuthSuccess ? state.user.name : 'Pelanggan';
+  }
+
+  String _userAddress(BuildContext context) {
+    final state = context.read<AuthCubit>().state;
+    if (state is AuthSuccess && state.user.address.trim().isNotEmpty) {
+      return state.user.address;
+    }
+    return 'Mulyorejo, Kec. Sukolilo';
   }
 }
 
-class _CategoryChip extends StatelessWidget {
+class _Header extends StatelessWidget {
+  final String name;
+  final String address;
+  const _Header({required this.name, required this.address});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        color: AppColors.primaryDark,
+        padding: EdgeInsets.fromLTRB(
+            16, MediaQuery.paddingOf(context).top + 13, 16, 16),
+        child: Row(children: [
+          const CircleAvatar(
+              radius: 20,
+              backgroundColor: Color(0xFF4A9D68),
+              child: Icon(Icons.person, color: Colors.white, size: 23)),
+          const SizedBox(width: 10),
+          Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text('Halo, $name!',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(address,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 10)),
+              ])),
+          Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: .13),
+                  borderRadius: BorderRadius.circular(12)),
+              child: const Icon(Icons.location_on_outlined,
+                  color: Colors.white, size: 21)),
+        ]),
+      );
+}
+
+class _HeroCard extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _HeroCard({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 130,
+        padding: const EdgeInsets.fromLTRB(16, 15, 16, 13),
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            gradient: const LinearGradient(
+                colors: [AppColors.primaryDark, AppColors.primary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x250F5C2D),
+                  blurRadius: 10,
+                  offset: Offset(0, 5))
+            ]),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Pesan Pengambilan Sampah',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          const Text(
+              'Pilih jadwal pengumpulan sekarang dan bantu\nbersihkan lingkungan kita.',
+              style:
+                  TextStyle(color: Colors.white70, fontSize: 10, height: 1.3)),
+          SizedBox(
+              height: 30,
+              child: ElevatedButton(
+                  onPressed: onPressed,
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.primaryDark,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      minimumSize: Size.zero,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8))),
+                  child: const Text('Pesan Sekarang',
+                      style: TextStyle(
+                          fontSize: 10, fontWeight: FontWeight.w700)))),
+        ]),
+      );
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final String? action;
+  final VoidCallback? onAction;
+  const _SectionTitle(this.title, {this.action, this.onAction});
+
+  @override
+  Widget build(BuildContext context) =>
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(title,
+            style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w700)),
+        if (action != null)
+          TextButton(
+              onPressed: onAction,
+              style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+              child: Text(action!,
+                  style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600))),
+      ]);
+}
+
+class _CategoryGrid extends StatelessWidget {
+  const _CategoryGrid();
+  @override
+  Widget build(BuildContext context) => GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 9,
+          mainAxisSpacing: 9,
+          childAspectRatio: 1.65,
+          children: const [
+            _CategoryCard('Organik', Icons.eco_outlined, Color(0xFFE7F5EA),
+                Color(0xFF35A875)),
+            _CategoryCard('Anorganik', Icons.local_drink_outlined,
+                Color(0xFFE5F2FC), Color(0xFF4C9AD8)),
+            _CategoryCard('B3 (Bahaya)', Icons.warning_amber_outlined,
+                Color(0xFFFDE9ED), Color(0xFFE36D7C)),
+            _CategoryCard('Daur Ulang', Icons.recycling_outlined,
+                Color(0xFFFFF6DD), Color(0xFFD59B28)),
+          ]);
+}
+
+class _CategoryCard extends StatelessWidget {
   final String label;
   final IconData icon;
-  final Color color;
-  const _CategoryChip({required this.label, required this.icon, required this.color});
+  final Color background;
+  final Color iconColor;
+  const _CategoryCard(this.label, this.icon, this.background, this.iconColor);
+  @override
+  Widget build(BuildContext context) => Container(
+      decoration: BoxDecoration(
+          color: background, borderRadius: BorderRadius.circular(11)),
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(icon, color: iconColor, size: 26),
+        const SizedBox(height: 6),
+        Text(label,
+            style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600))
+      ]));
+}
 
+class _ActiveOrderCard extends StatelessWidget {
+  final OrderEntity order;
+  const _ActiveOrderCard({required this.order});
   @override
   Widget build(BuildContext context) {
+    final date = DateFormat('EEEE, HH:mm', 'id_ID').format(order.pickupDate);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.25)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 8),
-          Expanded(child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13))),
-        ],
-      ),
-    );
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(color: AppColors.border),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x08000000), blurRadius: 5, offset: Offset(0, 2))
+            ]),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Row(children: [
+            Icon(Icons.local_shipping_outlined,
+                color: AppColors.primary, size: 19),
+            SizedBox(width: 7),
+            Expanded(
+                child: Text('Layanan Pickup',
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+            _SmallBadge('Menuju Lokasi', Color(0xFFE5F2FC), Color(0xFF3985C2))
+          ]),
+          const SizedBox(height: 8),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text(date,
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 10)),
+            Text('Petugas: ${order.officerName ?? 'Menunggu'}',
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 10))
+          ]),
+          const SizedBox(height: 9),
+          const ClipRRect(
+              borderRadius: BorderRadius.all(Radius.circular(4)),
+              child: LinearProgressIndicator(
+                  value: .7,
+                  minHeight: 5,
+                  backgroundColor: Color(0xFFE8EDEB),
+                  valueColor: AlwaysStoppedAnimation(AppColors.primary))),
+          const SizedBox(height: 6),
+          const Text('Petugas sedang menuju lokasi Anda',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 9)),
+        ]));
   }
 }
 
-class _ActiveOrderTile extends StatelessWidget {
+class _RecentOrderCard extends StatelessWidget {
   final OrderEntity order;
-  const _ActiveOrderTile({required this.order});
-
+  const _RecentOrderCard({required this.order});
   @override
   Widget build(BuildContext context) {
-    final dateFmt = DateFormat('dd MMM, HH:mm', 'id_ID');
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.local_shipping_outlined, color: AppColors.primary),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
+    final date =
+        DateFormat('dd MMM yyyy • HH:mm', 'id_ID').format(order.pickupDate);
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(color: AppColors.border)),
+        child: Row(children: [
+          Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                  color: const Color(0xFFE7F5EA),
+                  borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.eco_outlined,
+                  color: AppColors.primary, size: 21)),
+          const SizedBox(width: 10),
+          Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Layanan Pickup', style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Text(dateFmt.format(order.pickupDate), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                ],
-              ),
-            ),
-            StatusBadge(status: order.status),
-          ],
-        ),
-      ),
-    );
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text('Pickup Sampah ${order.wasteType.label}',
+                    style: const TextStyle(
+                        fontSize: 11, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 3),
+                Text(date,
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 9))
+              ])),
+          const _SmallBadge('Selesai', Color(0xFFE7F5EA), AppColors.primary)
+        ]));
   }
+}
+
+class _SmallBadge extends StatelessWidget {
+  final String label;
+  final Color background;
+  final Color foreground;
+  const _SmallBadge(this.label, this.background, this.foreground);
+  @override
+  Widget build(BuildContext context) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+          color: background, borderRadius: BorderRadius.circular(12)),
+      child: Text(label,
+          style: TextStyle(
+              color: foreground, fontSize: 9, fontWeight: FontWeight.w700)));
+}
+
+class _EmptyOrder extends StatelessWidget {
+  final String text;
+  const _EmptyOrder({required this.text});
+  @override
+  Widget build(BuildContext context) => Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 15),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: AppColors.border)),
+      child: Text(text,
+          textAlign: TextAlign.center,
+          style:
+              const TextStyle(color: AppColors.textSecondary, fontSize: 10)));
 }

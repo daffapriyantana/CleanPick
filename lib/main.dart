@@ -29,7 +29,8 @@ class AppDependencies {
   final OrderRepository orderRepository;
   final AuthRepository authRepository;
 
-  AppDependencies._({required this.orderRepository, required this.authRepository});
+  AppDependencies._(
+      {required this.orderRepository, required this.authRepository});
 
   factory AppDependencies.build() {
     final orderDataSource = OrderLocalDataSourceImpl();
@@ -38,7 +39,8 @@ class AppDependencies {
     final orderRepository = OrderRepositoryImpl(dataSource: orderDataSource);
     final authRepository = AuthRepositoryImpl(dataSource: authDataSource);
 
-    return AppDependencies._(orderRepository: orderRepository, authRepository: authRepository);
+    return AppDependencies._(
+        orderRepository: orderRepository, authRepository: authRepository);
   }
 }
 
@@ -59,6 +61,8 @@ class CleanPickApp extends StatelessWidget {
         BlocProvider<AuthCubit>(
           create: (_) => AuthCubit(
             loginUseCase: LoginUseCase(dependencies.authRepository),
+            loginPetugasUseCase:
+                LoginPetugasUseCase(dependencies.authRepository),
             registerUseCase: RegisterUseCase(dependencies.authRepository),
           ),
         ),

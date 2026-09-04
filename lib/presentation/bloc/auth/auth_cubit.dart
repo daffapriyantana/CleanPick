@@ -7,10 +7,14 @@ import 'auth_state.dart';
 
 class AuthCubit extends Cubit<AuthState> {
   final LoginUseCase loginUseCase;
+  final LoginPetugasUseCase loginPetugasUseCase;
   final RegisterUseCase registerUseCase;
 
-  AuthCubit({required this.loginUseCase, required this.registerUseCase})
-      : super(const AuthInitial());
+  AuthCubit({
+    required this.loginUseCase,
+    required this.loginPetugasUseCase,
+    required this.registerUseCase,
+  }) : super(const AuthInitial());
 
   Future<void> login({required String email, required String password}) async {
     emit(const AuthLoading());
@@ -21,6 +25,19 @@ class AuthCubit extends Cubit<AuthState> {
       emit(AuthFailureState(e.message));
     } catch (e) {
       emit(AuthFailureState('Gagal masuk: $e'));
+    }
+  }
+
+  Future<void> loginPetugas(
+      {required String id, required String password}) async {
+    emit(const AuthLoading());
+    try {
+      final user = await loginPetugasUseCase(id: id, password: password);
+      emit(AuthSuccess(user));
+    } on Failure catch (e) {
+      emit(AuthFailureState(e.message));
+    } catch (e) {
+      emit(AuthFailureState('Gagal masuk sebagai petugas: $e'));
     }
   }
 

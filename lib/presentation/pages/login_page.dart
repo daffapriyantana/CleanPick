@@ -8,6 +8,7 @@ import '../bloc/auth/auth_state.dart';
 import '../widgets/custom_text_field.dart';
 import 'home_page.dart';
 import 'register_page.dart';
+import 'petugas_login_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -21,6 +22,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController(text: 'budi@email.com');
   final _passwordController = TextEditingController();
   bool _obscure = true;
+  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -41,7 +43,9 @@ class _LoginPageState extends State<LoginPage> {
               );
             } else if (state is AuthFailureState) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
+                SnackBar(
+                    content: Text(state.message),
+                    backgroundColor: AppColors.error),
               );
             }
           },
@@ -60,23 +64,29 @@ class _LoginPageState extends State<LoginPage> {
                         width: 72,
                         height: 72,
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(Icons.recycling, color: AppColors.primary, size: 36),
+                        child: const Icon(Icons.recycling,
+                            color: AppColors.primary, size: 36),
                       ),
                     ),
                     const SizedBox(height: 16),
                     const Text('CleanPick',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary)),
                     const SizedBox(height: 4),
                     const Text('Selamat Datang Kembali',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
                     const Text('Silakan masuk untuk melanjutkan pesanan Anda',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary)),
                     const SizedBox(height: 28),
                     CustomTextField(
                       label: 'Email',
@@ -93,12 +103,37 @@ class _LoginPageState extends State<LoginPage> {
                       obscureText: _obscure,
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
-                        icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                        icon: Icon(_obscure
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined),
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                       validator: Validators.passwordError,
                     ),
-                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        SizedBox(
+                          height: 28,
+                          width: 28,
+                          child: Checkbox(
+                            value: _rememberMe,
+                            onChanged: (value) =>
+                                setState(() => _rememberMe = value ?? false),
+                            activeColor: AppColors.primary,
+                          ),
+                        ),
+                        const Text('Ingat Saya',
+                            style: TextStyle(fontSize: 12)),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () => _showMessage(
+                              'Fitur lupa password belum tersedia'),
+                          child: const Text('Lupa Password?',
+                              style: TextStyle(fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
                     ElevatedButton(
                       onPressed: isLoading
                           ? null
@@ -114,28 +149,71 @@ class _LoginPageState extends State<LoginPage> {
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2),
                             )
                           : const Text('Masuk'),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: isLoading
+                          ? null
+                          : () => _showMessage('Login Google belum tersedia'),
+                      icon: const Icon(Icons.g_mobiledata, size: 22),
+                      label: const Text('Masuk dengan Google'),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: isLoading
+                                ? null
+                                : () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const PetugasLoginPage()),
+                                    ),
+                            child: const Text('Masuk sebagai Petugas',
+                                style: TextStyle(fontSize: 11)),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: isLoading
+                                ? null
+                                : () =>
+                                    _showMessage('Login admin belum tersedia'),
+                            child: const Text('Masuk sebagai Admin',
+                                style: TextStyle(fontSize: 11)),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('Belum punya akun? ', style: TextStyle(color: AppColors.textSecondary)),
+                        const Text('Belum punya akun? ',
+                            style: TextStyle(color: AppColors.textSecondary)),
                         GestureDetector(
                           onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const RegisterPage()),
+                            MaterialPageRoute(
+                                builder: (_) => const RegisterPage()),
                           ),
                           child: const Text('Daftar',
-                              style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                              style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     const Center(
                       child: Text('Demo: budi@email.com / password123',
-                          style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          style: TextStyle(
+                              fontSize: 11, color: AppColors.textSecondary)),
                     ),
                   ],
                 ),
@@ -145,5 +223,10 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }

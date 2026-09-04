@@ -16,7 +16,7 @@ class _FakeDataSource implements OrderLocalDataSource {
 
   @override
   Future<OrderModel> cancelOrder(String orderId) async {
-    if (shouldThrow) throw ServerException('not found');
+    if (shouldThrow) throw const ServerException('not found');
     return orders.first;
   }
 
@@ -25,7 +25,7 @@ class _FakeDataSource implements OrderLocalDataSource {
 
   @override
   Future<OrderModel> getOrderDetail(String orderId) async {
-    if (shouldThrow) throw ServerException('Pesanan tidak ditemukan');
+    if (shouldThrow) throw const ServerException('Pesanan tidak ditemukan');
     return orders.first;
   }
 
@@ -67,9 +67,12 @@ void main() {
     expect(result.first.id, 'CP-001');
   });
 
-  test('getOrderDetail melempar ServerFailure ketika datasource melempar ServerException', () async {
+  test(
+      'getOrderDetail melempar ServerFailure ketika datasource melempar ServerException',
+      () async {
     dataSource.shouldThrow = true;
-    expect(() => repository.getOrderDetail('unknown'), throwsA(isA<ServerFailure>()));
+    expect(() => repository.getOrderDetail('unknown'),
+        throwsA(isA<ServerFailure>()));
   });
 
   test('createOrder menghitung harga lalu meneruskan ke datasource', () async {
