@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../bloc/auth/auth_cubit.dart';
 import '../bloc/auth/auth_state.dart';
 import 'petugas_order_detail_page.dart';
+import 'petugas_income_page.dart';
 import 'petugas_orders_page.dart';
 
 class PetugasDashboardPage extends StatefulWidget {
@@ -31,140 +32,165 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
       body: SafeArea(
         child: _selectedIndex == 1
             ? PetugasOrdersView(onMessage: _showMessage)
-            : Column(
-          children: [
-            _Header(name: name, id: id),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _SectionTitle('Ringkasan Hari Ini'),
-                    const SizedBox(height: 10),
-                    const Row(
-                      children: [
-                        Expanded(
-                            child: _StatisticCard(
-                                label: 'Hari Ini',
-                                value: '5',
-                                caption: 'Pesanan')),
-                        SizedBox(width: 8),
-                        Expanded(
-                            child: _StatisticCard(
-                                label: 'Selesai',
-                                value: '3',
-                                caption: 'Penjemputan')),
-                        SizedBox(width: 8),
-                        Expanded(
-                            child: _StatisticCard(
-                                label: 'Pendapatan',
-                                value: 'Rp 175rb',
-                                caption: 'Dari Petugas')),
-                      ],
-                    ),
-                    const SizedBox(height: 22),
-                    const _SectionTitle('Pesanan Aktif'),
-                    const SizedBox(height: 10),
-                    if (_activeCustomer != null)
-                      _ActivePickupCard(
-                        customerName: _activeCustomer!,
-                        address: _activeCustomer == 'Siti Rahma'
-                            ? 'Jl. Kenanga Indah No. 45, Kebayoran Baru'
-                            : _activeCustomer == 'Budi Santoso'
-                                ? 'Jl. Pondok Indah Mall, Area Pickup Utara'
-                                : 'Jl. Melati Indah No. 12, Cilandak',
-                        onDetail: () => _openOrderDetail(
-                          customerName: _activeCustomer!,
-                          address: _activeCustomer == 'Siti Rahma'
-                              ? 'Jl. Kenanga Indah No. 45, Kebayoran Baru'
-                              : _activeCustomer == 'Budi Santoso'
-                                  ? 'Jl. Pondok Indah Mall, Area Pickup Utara'
-                                  : 'Jl. Melati Indah No. 12, Cilandak',
-                          distance: '2.3 km',
-                          wasteType: 'Plastik',
-                          vehicleType: 'Pickup Box',
-                          vehicleFee: 'Rp 35.000',
-                          distanceFee: 'Rp 10.000',
-                          total: 'Rp 45.000',
+            : _selectedIndex == 2
+                ? const PetugasIncomeView()
+                : Column(
+                    children: [
+                      _Header(name: name, id: id),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _SectionTitle('Ringkasan Hari Ini'),
+                              const SizedBox(height: 10),
+                              const Row(
+                                children: [
+                                  Expanded(
+                                      child: _StatisticCard(
+                                          label: 'Hari Ini',
+                                          value: '5',
+                                          caption: 'Pesanan')),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                      child: _StatisticCard(
+                                          label: 'Selesai',
+                                          value: '3',
+                                          caption: 'Penjemputan')),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                      child: _StatisticCard(
+                                          label: 'Pendapatan',
+                                          value: 'Rp 175rb',
+                                          caption: 'Dari Petugas')),
+                                ],
+                              ),
+                              const SizedBox(height: 22),
+                              const _SectionTitle('Pesanan Aktif'),
+                              const SizedBox(height: 10),
+                              if (_activeCustomer != null)
+                                _ActivePickupCard(
+                                  customerName: _activeCustomer!,
+                                  address: _activeCustomer == 'Siti Rahma'
+                                      ? 'Jl. Kenanga Indah No. 45, Kebayoran Baru'
+                                      : _activeCustomer == 'Budi Santoso'
+                                          ? 'Jl. Pondok Indah Mall, Area Pickup Utara'
+                                          : 'Jl. Melati Indah No. 12, Cilandak',
+                                  onDetail: () => _openOrderDetail(
+                                    customerName: _activeCustomer!,
+                                    address: _activeCustomer == 'Siti Rahma'
+                                        ? 'Jl. Kenanga Indah No. 45, Kebayoran Baru'
+                                        : _activeCustomer == 'Budi Santoso'
+                                            ? 'Jl. Pondok Indah Mall, Area Pickup Utara'
+                                            : 'Jl. Melati Indah No. 12, Cilandak',
+                                    distance: '2.3 km',
+                                    wasteType: 'Plastik',
+                                    vehicleType: 'Pickup Box',
+                                    vehicleFee: 'Rp 35.000',
+                                    distanceFee: 'Rp 10.000',
+                                    total: 'Rp 45.000',
+                                  ),
+                                ),
+                              const SizedBox(height: 22),
+                              const Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  _SectionTitle('Pesanan Masuk'),
+                                  _Pill(
+                                      label: '2 Baru',
+                                      background: Color(0xFFFEE2E2),
+                                      foreground: AppColors.error),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              _IncomingOrderCard(
+                                name: 'Budi Santoso',
+                                time: '5 menit yang lalu',
+                                distance: '2.3 km',
+                                address:
+                                    'Jl. Pondok Indah Mall, Area Pickup Utara',
+                                chips: const [
+                                  (
+                                    'Plastik',
+                                    Color(0xFFDBEAFE),
+                                    Color(0xFF2563EB)
+                                  ),
+                                  (
+                                    'Kertas',
+                                    Color(0xFFFEF3C7),
+                                    Color(0xFFD97706)
+                                  ),
+                                  (
+                                    'Pickup',
+                                    Color(0xFFDCFCE7),
+                                    Color(0xFF15803D)
+                                  )
+                                ],
+                                price: 'Rp 45.000',
+                                accepted: _acceptedCustomer == 'Budi Santoso',
+                                onAccept: () => _acceptOrder('Budi Santoso'),
+                                onReject: () => _showMessage(
+                                    'Pesanan Budi Santoso ditolak'),
+                                onDetail: () => _openOrderDetail(
+                                  customerName: 'Budi Santoso',
+                                  address:
+                                      'Jl. Pondok Indah Mall, Area Pickup Utara',
+                                  distance: '2.3 km',
+                                  wasteType: 'Plastik',
+                                  vehicleType: 'Pickup Box',
+                                  vehicleFee: 'Rp 35.000',
+                                  distanceFee: 'Rp 10.000',
+                                  total: 'Rp 45.000',
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              _IncomingOrderCard(
+                                name: 'Dewi Lestari',
+                                time: '10 menit yang lalu',
+                                distance: '4.1 km',
+                                address: 'Jl. Melati Indah No. 12, Cilandak',
+                                chips: const [
+                                  (
+                                    'Organik',
+                                    Color(0xFFDCFCE7),
+                                    Color(0xFF15803D)
+                                  ),
+                                  (
+                                    'Motor Tiga',
+                                    Color(0xFFF3E8FF),
+                                    Color(0xFF7E22CE)
+                                  )
+                                ],
+                                price: 'Rp 30.000',
+                                accepted: _acceptedCustomer == 'Dewi Lestari',
+                                onAccept: () => _acceptOrder('Dewi Lestari'),
+                                onReject: () => _showMessage(
+                                    'Pesanan Dewi Lestari ditolak'),
+                                onDetail: () => _openOrderDetail(
+                                  customerName: 'Dewi Lestari',
+                                  address: 'Jl. Melati Indah No. 12, Cilandak',
+                                  distance: '4.1 km',
+                                  wasteType: 'Organik',
+                                  vehicleType: 'Motor Tiga',
+                                  vehicleFee: 'Rp 25.000',
+                                  distanceFee: 'Rp 5.000',
+                                  total: 'Rp 30.000',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    const SizedBox(height: 22),
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _SectionTitle('Pesanan Masuk'),
-                        _Pill(
-                            label: '2 Baru',
-                            background: Color(0xFFFEE2E2),
-                            foreground: AppColors.error),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    _IncomingOrderCard(
-                      name: 'Budi Santoso',
-                      time: '5 menit yang lalu',
-                      distance: '2.3 km',
-                      address: 'Jl. Pondok Indah Mall, Area Pickup Utara',
-                      chips: const [
-                        ('Plastik', Color(0xFFDBEAFE), Color(0xFF2563EB)),
-                        ('Kertas', Color(0xFFFEF3C7), Color(0xFFD97706)),
-                        ('Pickup', Color(0xFFDCFCE7), Color(0xFF15803D))
-                      ],
-                      price: 'Rp 45.000',
-                      accepted: _acceptedCustomer == 'Budi Santoso',
-                      onAccept: () => _acceptOrder('Budi Santoso'),
-                      onReject: () =>
-                          _showMessage('Pesanan Budi Santoso ditolak'),
-                      onDetail: () => _openOrderDetail(
-                        customerName: 'Budi Santoso',
-                        address: 'Jl. Pondok Indah Mall, Area Pickup Utara',
-                        distance: '2.3 km',
-                        wasteType: 'Plastik',
-                        vehicleType: 'Pickup Box',
-                        vehicleFee: 'Rp 35.000',
-                        distanceFee: 'Rp 10.000',
-                        total: 'Rp 45.000',
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _IncomingOrderCard(
-                      name: 'Dewi Lestari',
-                      time: '10 menit yang lalu',
-                      distance: '4.1 km',
-                      address: 'Jl. Melati Indah No. 12, Cilandak',
-                      chips: const [
-                        ('Organik', Color(0xFFDCFCE7), Color(0xFF15803D)),
-                        ('Motor Tiga', Color(0xFFF3E8FF), Color(0xFF7E22CE))
-                      ],
-                      price: 'Rp 30.000',
-                      accepted: _acceptedCustomer == 'Dewi Lestari',
-                      onAccept: () => _acceptOrder('Dewi Lestari'),
-                      onReject: () =>
-                          _showMessage('Pesanan Dewi Lestari ditolak'),
-                      onDetail: () => _openOrderDetail(
-                        customerName: 'Dewi Lestari',
-                        address: 'Jl. Melati Indah No. 12, Cilandak',
-                        distance: '4.1 km',
-                        wasteType: 'Organik',
-                        vehicleType: 'Motor Tiga',
-                        vehicleFee: 'Rp 25.000',
-                        distanceFee: 'Rp 5.000',
-                        total: 'Rp 30.000',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+                    ],
+                  ),
       ),
       bottomNavigationBar: _BottomNavigation(
         selectedIndex: _selectedIndex,
         onSelected: (index) {
           setState(() => _selectedIndex = index);
-          if (index != 0 && index != 1) {
+          if (index == 3) {
             _showMessage('Menu ini segera tersedia');
           }
         },
@@ -583,10 +609,9 @@ class _BottomNavigation extends StatelessWidget {
                 selectedIcon: Icon(Icons.assignment, color: AppColors.primary),
                 label: 'Pesanan'),
             NavigationDestination(
-                icon: Icon(Icons.local_shipping_outlined),
-                selectedIcon:
-                    Icon(Icons.local_shipping, color: AppColors.primary),
-                label: 'Penjemputan'),
+                icon: Icon(Icons.payments_outlined),
+                selectedIcon: Icon(Icons.payments, color: AppColors.primary),
+                label: 'Pendapatan'),
             NavigationDestination(
                 icon: Icon(Icons.person_outline),
                 selectedIcon: Icon(Icons.person, color: AppColors.primary),
