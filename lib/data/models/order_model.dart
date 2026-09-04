@@ -18,6 +18,10 @@ class OrderModel extends OrderEntity {
     required super.createdAt,
     super.note,
     super.officerName,
+    super.photoPath,
+    super.latitude,
+    super.longitude,
+    super.paymentMethod,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -37,6 +41,10 @@ class OrderModel extends OrderEntity {
       createdAt: DateTime.parse(json['createdAt'] as String),
       note: json['note'] as String?,
       officerName: json['officerName'] as String?,
+      photoPath: json['photoPath'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      paymentMethod: PaymentMethod.values[json['paymentMethod'] as int? ?? 0],
     );
   }
 
@@ -56,6 +64,10 @@ class OrderModel extends OrderEntity {
         'createdAt': createdAt.toIso8601String(),
         'note': note,
         'officerName': officerName,
+        'photoPath': photoPath,
+        'latitude': latitude,
+        'longitude': longitude,
+        'paymentMethod': paymentMethod.index,
       };
 
   factory OrderModel.fromEntity(OrderEntity e) => OrderModel(
@@ -74,5 +86,9 @@ class OrderModel extends OrderEntity {
         createdAt: e.createdAt,
         note: e.note,
         officerName: e.officerName,
+        photoPath: e.photoPath,
+        latitude: e.latitude,
+        longitude: e.longitude,
+        paymentMethod: e.paymentMethod,
       );
 }

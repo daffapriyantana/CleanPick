@@ -76,6 +76,8 @@ extension VehicleTypeX on VehicleType {
 /// Kept as a constant here so both the domain use case and any UI
 /// preview use exactly the same number.
 const double kDistanceFeePerKm = 3000;
+const double kCleanPickDepotLatitude = -6.2088;
+const double kCleanPickDepotLongitude = 106.8456;
 
 /// Order lifecycle status, in the order the docs describe.
 enum OrderStatus { menunggu, diproses, dijadwalkan, selesai, dibatalkan }
@@ -116,4 +118,28 @@ enum PaymentStatus { belumBayar, lunas }
 
 extension PaymentStatusX on PaymentStatus {
   String get label => this == PaymentStatus.lunas ? 'Lunas' : 'Belum Bayar';
+}
+
+enum PaymentMethod { codTunai, codQris, vaBca, vaBni, vaBri, vaMandiri }
+
+extension PaymentMethodX on PaymentMethod {
+  String get label {
+    switch (this) {
+      case PaymentMethod.codTunai:
+        return 'COD - Tunai';
+      case PaymentMethod.codQris:
+        return 'COD - QRIS';
+      case PaymentMethod.vaBca:
+        return 'Virtual Account BCA';
+      case PaymentMethod.vaBni:
+        return 'Virtual Account BNI';
+      case PaymentMethod.vaBri:
+        return 'Virtual Account BRI';
+      case PaymentMethod.vaMandiri:
+        return 'Virtual Account Mandiri';
+    }
+  }
+
+  bool get isCod =>
+      this == PaymentMethod.codTunai || this == PaymentMethod.codQris;
 }

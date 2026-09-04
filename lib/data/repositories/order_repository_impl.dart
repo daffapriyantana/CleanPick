@@ -50,6 +50,29 @@ class OrderRepositoryImpl implements OrderRepository {
     required DateTime pickupDate,
     required VehicleType vehicleType,
     String? note,
+  }) =>
+      createOrderWithDetails(
+        wasteType: wasteType,
+        weightKg: weightKg,
+        address: address,
+        pickupDate: pickupDate,
+        vehicleType: vehicleType,
+        note: note,
+      );
+
+  @override
+  Future<OrderEntity> createOrderWithDetails({
+    required WasteType wasteType,
+    required double weightKg,
+    required String address,
+    required DateTime pickupDate,
+    required VehicleType vehicleType,
+    String? note,
+    String? photoPath,
+    double? latitude,
+    double? longitude,
+    PaymentMethod paymentMethod = PaymentMethod.codTunai,
+    double distanceKm = 0,
   }) async {
     // Business rule (fee calculation) lives in the domain use case;
     // the repository only orchestrates data flow.
@@ -57,6 +80,7 @@ class OrderRepositoryImpl implements OrderRepository {
       weightKg: weightKg,
       wasteType: wasteType,
       vehicleType: vehicleType,
+      distanceKm: distanceKm,
     );
 
     final order = OrderModel(
@@ -74,6 +98,10 @@ class OrderRepositoryImpl implements OrderRepository {
       paymentStatus: PaymentStatus.belumBayar,
       createdAt: DateTime.now(),
       note: note,
+      photoPath: photoPath,
+      latitude: latitude,
+      longitude: longitude,
+      paymentMethod: paymentMethod,
     );
 
     try {

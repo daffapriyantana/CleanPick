@@ -63,12 +63,14 @@ class OrderCubit extends Cubit<OrderState> {
     required double weightKg,
     required WasteType wasteType,
     required VehicleType vehicleType,
+    double distanceKm = 0,
   }) {
     try {
       final result = calculatePrice(
         weightKg: weightKg,
         wasteType: wasteType,
         vehicleType: vehicleType,
+        distanceKm: distanceKm,
       );
       emit(OrderPricePreview(result));
     } on Failure catch (e) {
@@ -83,6 +85,11 @@ class OrderCubit extends Cubit<OrderState> {
     required DateTime? pickupDate,
     required VehicleType vehicleType,
     String? note,
+    String? photoPath,
+    double? latitude,
+    double? longitude,
+    PaymentMethod paymentMethod = PaymentMethod.codTunai,
+    double distanceKm = 0,
   }) async {
     emit(const OrderLoading());
     try {
@@ -93,6 +100,11 @@ class OrderCubit extends Cubit<OrderState> {
         pickupDate: pickupDate,
         vehicleType: vehicleType,
         note: note,
+        photoPath: photoPath,
+        latitude: latitude,
+        longitude: longitude,
+        paymentMethod: paymentMethod,
+        distanceKm: distanceKm,
       );
       emit(OrderCreated(order));
     } on Failure catch (e) {
