@@ -11,6 +11,7 @@ import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/order_repository.dart';
 import 'domain/usecases/cancel_order.dart';
 import 'domain/usecases/create_order.dart';
+import 'domain/usecases/assign_order.dart';
 import 'domain/usecases/get_order_detail.dart';
 import 'domain/usecases/get_orders.dart';
 import 'domain/usecases/login_usecase.dart';
@@ -71,6 +72,7 @@ class CleanPickApp extends StatelessWidget {
             getOrders: GetOrders(dependencies.orderRepository),
             getOrderDetail: GetOrderDetail(dependencies.orderRepository),
             createOrder: CreateOrder(dependencies.orderRepository),
+            assignOrder: AssignOrder(dependencies.orderRepository),
             cancelOrder: CancelOrder(dependencies.orderRepository),
             payOrder: PayOrder(dependencies.orderRepository),
           ),

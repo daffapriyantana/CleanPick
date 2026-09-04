@@ -68,6 +68,8 @@ class OrderRepositoryImpl implements OrderRepository {
     required DateTime pickupDate,
     required VehicleType vehicleType,
     String? note,
+    String? customerId,
+    String? customerName,
     String? photoPath,
     double? latitude,
     double? longitude,
@@ -98,6 +100,8 @@ class OrderRepositoryImpl implements OrderRepository {
       paymentStatus: PaymentStatus.belumBayar,
       createdAt: DateTime.now(),
       note: note,
+      customerId: customerId,
+      customerName: customerName,
       photoPath: photoPath,
       latitude: latitude,
       longitude: longitude,
@@ -106,6 +110,17 @@ class OrderRepositoryImpl implements OrderRepository {
 
     try {
       return await dataSource.createOrder(order);
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
+
+  @override
+  Future<OrderEntity> assignOrder(
+      {required String orderId, required String officerName}) async {
+    try {
+      return await dataSource.assignOrder(
+          orderId: orderId, officerName: officerName);
     } on ServerException catch (e) {
       throw ServerFailure(e.message);
     }

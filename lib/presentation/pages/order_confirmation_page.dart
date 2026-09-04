@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../bloc/auth/auth_cubit.dart';
+import '../bloc/auth/auth_state.dart';
 import '../../domain/usecases/calculate_order_price.dart';
 import '../bloc/order/order_cubit.dart';
 import '../bloc/order/order_state.dart';
@@ -193,6 +195,8 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
     );
     if (confirmed != true || !mounted) return;
     setState(() => _submitting = true);
+    final authState = context.read<AuthCubit>().state;
+    final user = authState is AuthSuccess ? authState.user : null;
     context.read<OrderCubit>().submitOrder(
           wasteType: widget.draft.wasteType,
           weightKg: widget.draft.weightKg,
@@ -205,6 +209,8 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
           longitude: widget.draft.longitude,
           paymentMethod: _paymentMethod,
           distanceKm: widget.draft.distanceKm,
+          customerId: user?.id,
+          customerName: user?.name,
         );
   }
 }

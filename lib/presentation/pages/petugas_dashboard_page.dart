@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_constants.dart';
+import '../../domain/entities/order_entity.dart';
 import '../bloc/auth/auth_cubit.dart';
 import '../bloc/auth/auth_state.dart';
-import 'petugas_order_detail_page.dart';
+import '../bloc/order/order_cubit.dart';
+import '../bloc/order/order_state.dart';
 import 'petugas_income_page.dart';
 import 'petugas_orders_page.dart';
 
@@ -17,8 +20,14 @@ class PetugasDashboardPage extends StatefulWidget {
 
 class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
   int _selectedIndex = 0;
-  String? _activeCustomer = 'Siti Rahma';
-  String? _acceptedCustomer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<OrderCubit>().loadOrders();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +47,11 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
                     children: [
                       _Header(name: name, id: id),
                       Expanded(
-                        child: SingleChildScrollView(
+                        child: _LivePetugasHome(
+                          officerName: name,
+                          onMessage: _showMessage,
+                        ),
+                        /* SingleChildScrollView(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,7 +194,7 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
                               ),
                             ],
                           ),
-                        ),
+                        ), */
                       ),
                     ],
                   ),
@@ -203,83 +216,146 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _acceptOrder(String customerName) {
-    if (_activeCustomer != null) {
-      _showActiveOrderDialog();
-      return;
-    }
-    setState(() {
-      _acceptedCustomer = customerName;
-      _activeCustomer = customerName;
-    });
-    _showMessage('Pesanan $customerName diterima');
-  }
+}
 
-  Future<void> _showActiveOrderDialog() async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Pesanan Aktif'),
-        content: const Text(
-            'Selesaikan atau batalkan pesanan aktif terlebih dahulu sebelum menerima pesanan lain.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+class _LivePetugasHome extends StatelessWidget {
+  final String officerName;
+  final ValueChanged<String> onMessage;
+
+  const _LivePetugasHome({required this.officerName, required this.onMessage});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<OrderCubit, OrderState>(
+      listener: (context, state) {
+        if (state is OrderFailure) onMessage(state.message);
+        if (state is OrderCreated && state.order.status == OrderStatus.diproses) {
+          onMessage('Pesanan ${state.order.id} berhasil diambil');
+          context.read<OrderCubit>().loadOrders();
+        }
+      },
+      builder: (context, state) {
+        if (state is OrderInitial || state is OrderLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (state is OrderFailure) {
+          return Center(child: Text(state.message));
+        }
+        if (state is! OrdersLoaded) return const SizedBox.shrink();
+
+        final active = state.orders
+            .where((order) =>
+                order.status == OrderStatus.diproses &&
+                order.officerName == officerName)
+            .toList();
+        final incoming = state.orders
+            .where((order) => order.status == OrderStatus.menunggu)
+            .toList();
+
+        return RefreshIndicator(
+          onRefresh: () => context.read<OrderCubit>().loadOrders(),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            children: [
+              const _SectionTitle('Pesanan Aktif'),
+              const SizedBox(height: 10),
+              if (active.isEmpty)
+                const _EmptyLiveOrder(message: 'Belum ada pesanan aktif')
+              else
+                ...active.map((order) => _LiveOrderCard(order: order, active: true)),
+              const SizedBox(height: 22),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const _SectionTitle('Pesanan Masuk'),
+                  _Pill(
+                    label: '${incoming.length} Baru',
+                    background: const Color(0xFFFEE2E2),
+                    foreground: AppColors.error,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (incoming.isEmpty)
+                const _EmptyLiveOrder(message: 'Belum ada pesanan customer')
+              else
+                ...incoming.map((order) => _LiveOrderCard(
+                      order: order,
+                      active: false,
+                      onTake: () => context.read<OrderCubit>().takeOrder(
+                            orderId: order.id,
+                            officerName: officerName,
+                          ),
+                    )),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _LiveOrderCard extends StatelessWidget {
+  final OrderEntity order;
+  final bool active;
+  final VoidCallback? onTake;
+
+  const _LiveOrderCard({required this.order, required this.active, this.onTake});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: active ? AppColors.primary : AppColors.border),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(
+            child: Text(
+              order.customerName ?? 'Customer CleanPick',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+          ),
+          _Pill(
+            label: active ? 'Diproses' : 'Menunggu',
+            background: active ? const Color(0xFFDBEAFE) : const Color(0xFFFEF3C7),
+            foreground: active ? const Color(0xFF2563EB) : const Color(0xFFD97706),
+          ),
+        ]),
+        const SizedBox(height: 9),
+        Text(order.address, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+        const SizedBox(height: 6),
+        Text('${order.wasteType.label} • ${order.vehicleType.label} • Rp ${order.totalPrice.toStringAsFixed(0)}',
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+        if (!active) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onTake,
+              icon: const Icon(Icons.assignment_turned_in_outlined, size: 17),
+              label: const Text('Ambil Pesanan'),
+            ),
           ),
         ],
-      ),
+      ]),
     );
   }
+}
 
-  void _completeActiveOrder() {
-    final customerName = _activeCustomer;
-    setState(() {
-      _activeCustomer = null;
-      _acceptedCustomer = null;
-    });
-    _showMessage(
-        'Pesanan ${customerName ?? ''} selesai. Anda bisa menerima pesanan baru');
-  }
+class _EmptyLiveOrder extends StatelessWidget {
+  final String message;
+  const _EmptyLiveOrder({required this.message});
 
-  void _cancelActiveOrder() {
-    final customerName = _activeCustomer;
-    setState(() {
-      _activeCustomer = null;
-      _acceptedCustomer = null;
-    });
-    _showMessage(
-        'Pesanan ${customerName ?? ''} dibatalkan. Anda bisa menerima pesanan baru');
-  }
-
-  void _openOrderDetail({
-    required String customerName,
-    required String address,
-    required String distance,
-    required String wasteType,
-    required String vehicleType,
-    required String vehicleFee,
-    required String distanceFee,
-    required String total,
-  }) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PetugasOrderDetailPage(
-          customerName: customerName,
-          address: address,
-          distance: distance,
-          wasteType: wasteType,
-          vehicleType: vehicleType,
-          vehicleFee: vehicleFee,
-          distanceFee: distanceFee,
-          total: total,
-          onCompleted: _completeActiveOrder,
-          onCancelled: _cancelActiveOrder,
-        ),
-      ),
-    );
-  }
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: Text(message, style: const TextStyle(color: AppColors.textSecondary))),
+      );
 }
 
 class _Header extends StatelessWidget {
@@ -340,47 +416,6 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _StatisticCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final String caption;
-  const _StatisticCard(
-      {required this.label, required this.value, required this.caption});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 11, 8, 10),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.border)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style:
-                const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-        const SizedBox(height: 7),
-        FittedBox(
-            alignment: Alignment.centerLeft,
-            fit: BoxFit.scaleDown,
-            child: Text(value,
-                style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary))),
-        const SizedBox(height: 3),
-        Text(caption,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style:
-                const TextStyle(fontSize: 9, color: AppColors.textSecondary)),
-      ]),
-    );
-  }
-}
-
 class _SectionTitle extends StatelessWidget {
   final String text;
   const _SectionTitle(this.text);
@@ -411,171 +446,6 @@ class _Pill extends StatelessWidget {
             style: TextStyle(
                 color: foreground, fontSize: 9, fontWeight: FontWeight.w700)),
       );
-}
-
-class _ActivePickupCard extends StatelessWidget {
-  final String customerName;
-  final String address;
-  final VoidCallback onDetail;
-  const _ActivePickupCard({
-    required this.customerName,
-    required this.address,
-    required this.onDetail,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: AppColors.primary, width: 1.3)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(
-              child: Text(customerName,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.bold))),
-          const _Pill(
-              label: 'Menuju Lokasi',
-              background: Color(0xFFDCFCE7),
-              foreground: Color(0xFF15803D)),
-        ]),
-        const SizedBox(height: 12),
-        Row(children: [
-          const Icon(Icons.location_on_outlined,
-              color: AppColors.primary, size: 17),
-          const SizedBox(width: 6),
-          Expanded(
-              child: Text(address,
-                  style: const TextStyle(
-                      fontSize: 10, color: AppColors.textSecondary))),
-        ]),
-        const SizedBox(height: 11),
-        Row(children: [
-          const Text('Estimasi Tarif: ',
-              style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-          const Text('Rp 45.000',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-          const Spacer(),
-          TextButton(
-              onPressed: onDetail,
-              child: const Text('Lihat Detail',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-        ]),
-      ]),
-    );
-  }
-}
-
-class _IncomingOrderCard extends StatelessWidget {
-  final String name;
-  final String time;
-  final String distance;
-  final String address;
-  final List<(String, Color, Color)> chips;
-  final String price;
-  final bool accepted;
-  final VoidCallback onAccept;
-  final VoidCallback onReject;
-  final VoidCallback onDetail;
-  const _IncomingOrderCard(
-      {required this.name,
-      required this.time,
-      required this.distance,
-      required this.address,
-      required this.chips,
-      required this.price,
-      required this.accepted,
-      required this.onAccept,
-      required this.onReject,
-      required this.onDetail});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.border)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(
-              child: Text(name,
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.bold))),
-          Text(time,
-              style:
-                  const TextStyle(fontSize: 9, color: AppColors.textSecondary)),
-        ]),
-        const SizedBox(height: 5),
-        Row(children: [
-          const Icon(Icons.near_me_outlined,
-              size: 14, color: AppColors.textSecondary),
-          const SizedBox(width: 4),
-          Text(distance,
-              style: const TextStyle(
-                  fontSize: 10, color: AppColors.textSecondary)),
-        ]),
-        const SizedBox(height: 7),
-        Text(address,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style:
-                const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
-        Wrap(
-            spacing: 5,
-            runSpacing: 4,
-            children: chips
-                .map((chip) => _Pill(
-                    label: chip.$1, background: chip.$2, foreground: chip.$3))
-                .toList()),
-        const Divider(height: 20),
-        Row(children: [
-          Text(price,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryDark)),
-          const Spacer(),
-          if (accepted)
-            ElevatedButton.icon(
-              onPressed: onDetail,
-              icon: const Icon(Icons.receipt_long_outlined, size: 15),
-              label:
-                  const Text('Detail Pesanan', style: TextStyle(fontSize: 10)),
-              style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(124, 34),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(7))),
-            )
-          else ...[
-            OutlinedButton(
-                onPressed: onReject,
-                style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    side: const BorderSide(color: AppColors.error),
-                    minimumSize: const Size(68, 34),
-                    padding: const EdgeInsets.symmetric(horizontal: 10)),
-                child: const Text('Tolak', style: TextStyle(fontSize: 10))),
-            const SizedBox(width: 7),
-            ElevatedButton(
-                onPressed: onAccept,
-                style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(72, 34),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(7))),
-                child: const Text('Terima', style: TextStyle(fontSize: 10))),
-          ],
-        ]),
-      ]),
-    );
-  }
 }
 
 class _BottomNavigation extends StatelessWidget {

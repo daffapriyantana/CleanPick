@@ -16,6 +16,8 @@ class OrderEntity extends Equatable {
   final PaymentStatus paymentStatus;
   final DateTime createdAt;
   final String? note;
+  final String? customerId;
+  final String? customerName;
   final String? officerName;
   final String? photoPath;
   final double? latitude;
@@ -37,6 +39,8 @@ class OrderEntity extends Equatable {
     required this.paymentStatus,
     required this.createdAt,
     this.note,
+    this.customerId,
+    this.customerName,
     this.officerName,
     this.photoPath,
     this.latitude,
@@ -52,6 +56,8 @@ class OrderEntity extends Equatable {
     double? latitude,
     double? longitude,
     PaymentMethod? paymentMethod,
+    String? customerId,
+    String? customerName,
   }) {
     return OrderEntity(
       id: id,
@@ -68,6 +74,8 @@ class OrderEntity extends Equatable {
       paymentStatus: paymentStatus ?? this.paymentStatus,
       createdAt: createdAt,
       note: note,
+      customerId: customerId ?? this.customerId,
+      customerName: customerName ?? this.customerName,
       officerName: officerName ?? this.officerName,
       photoPath: photoPath ?? this.photoPath,
       latitude: latitude ?? this.latitude,
@@ -92,6 +100,8 @@ class OrderEntity extends Equatable {
         paymentStatus,
         createdAt,
         note,
+        customerId,
+        customerName,
         officerName,
         photoPath,
         latitude,

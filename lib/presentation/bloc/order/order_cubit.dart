@@ -5,6 +5,7 @@ import '../../../core/error/failures.dart';
 import '../../../domain/usecases/calculate_order_price.dart';
 import '../../../domain/usecases/cancel_order.dart';
 import '../../../domain/usecases/create_order.dart';
+import '../../../domain/usecases/assign_order.dart';
 import '../../../domain/usecases/get_order_detail.dart';
 import '../../../domain/usecases/get_orders.dart';
 import '../../../domain/usecases/pay_order.dart';
@@ -21,6 +22,7 @@ class OrderCubit extends Cubit<OrderState> {
   final CreateOrder createOrder;
   final CancelOrder cancelOrder;
   final PayOrder payOrder;
+  final AssignOrder assignOrder;
   final CalculateOrderPrice calculatePrice;
 
   OrderCubit({
@@ -29,6 +31,7 @@ class OrderCubit extends Cubit<OrderState> {
     required this.createOrder,
     required this.cancelOrder,
     required this.payOrder,
+    required this.assignOrder,
     CalculateOrderPrice? calculatePrice,
   })  : calculatePrice = calculatePrice ?? const CalculateOrderPrice(),
         super(const OrderInitial());
@@ -85,6 +88,8 @@ class OrderCubit extends Cubit<OrderState> {
     required DateTime? pickupDate,
     required VehicleType vehicleType,
     String? note,
+    String? customerId,
+    String? customerName,
     String? photoPath,
     double? latitude,
     double? longitude,
@@ -100,6 +105,8 @@ class OrderCubit extends Cubit<OrderState> {
         pickupDate: pickupDate,
         vehicleType: vehicleType,
         note: note,
+        customerId: customerId,
+        customerName: customerName,
         photoPath: photoPath,
         latitude: latitude,
         longitude: longitude,
@@ -111,6 +118,20 @@ class OrderCubit extends Cubit<OrderState> {
       emit(OrderFailure(e.message));
     } catch (e) {
       emit(OrderFailure('Gagal membuat pesanan: $e'));
+    }
+  }
+
+  Future<void> takeOrder(
+      {required String orderId, required String officerName}) async {
+    emit(const OrderLoading());
+    try {
+      final order =
+          await assignOrder(orderId: orderId, officerName: officerName);
+      emit(OrderCreated(order));
+    } on Failure catch (e) {
+      emit(OrderFailure(e.message));
+    } catch (e) {
+      emit(OrderFailure('Gagal mengambil pesanan: $e'));
     }
   }
 

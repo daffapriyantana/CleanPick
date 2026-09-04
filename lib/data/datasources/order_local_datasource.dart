@@ -10,6 +10,8 @@ abstract class OrderLocalDataSource {
   Future<List<OrderModel>> getOrders();
   Future<OrderModel> getOrderDetail(String orderId);
   Future<OrderModel> createOrder(OrderModel order);
+  Future<OrderModel> assignOrder(
+      {required String orderId, required String officerName});
   Future<OrderModel> cancelOrder(String orderId);
   Future<OrderModel> payOrder(String orderId);
 }
@@ -22,7 +24,8 @@ class OrderLocalDataSourceImpl implements OrderLocalDataSource {
       id: 'CP-20240115-001',
       wasteType: WasteType.organik,
       weightKg: 10,
-      address: 'Jl. Melati No. 12, RT 05/RW 03, Kel. Kebayoran Baru, Jakarta Selatan',
+      address:
+          'Jl. Melati No. 12, RT 05/RW 03, Kel. Kebayoran Baru, Jakarta Selatan',
       pickupDate: DateTime.now().subtract(const Duration(days: 5)),
       vehicleType: VehicleType.pickup,
       baseFee: 35000,
@@ -38,7 +41,8 @@ class OrderLocalDataSourceImpl implements OrderLocalDataSource {
       id: 'CP-20240120-002',
       wasteType: WasteType.anorganik,
       weightKg: 15,
-      address: 'Jl. Melati No. 12, RT 05/RW 03, Kel. Kebayoran Baru, Jakarta Selatan',
+      address:
+          'Jl. Melati No. 12, RT 05/RW 03, Kel. Kebayoran Baru, Jakarta Selatan',
       pickupDate: DateTime.now().add(const Duration(days: 1)),
       vehicleType: VehicleType.motorRoda3,
       baseFee: 25000,
@@ -76,6 +80,24 @@ class OrderLocalDataSourceImpl implements OrderLocalDataSource {
     await Future.delayed(const Duration(milliseconds: 900));
     _orders.add(order);
     return order;
+  }
+
+  @override
+  Future<OrderModel> assignOrder(
+      {required String orderId, required String officerName}) async {
+    final index = _orders.indexWhere((order) => order.id == orderId);
+    if (index == -1) {
+      throw ServerException('Pesanan dengan ID $orderId tidak ditemukan');
+    }
+    if (_orders[index].status != OrderStatus.menunggu) {
+      throw const ServerException('Pesanan sudah diambil petugas lain');
+    }
+    final updated = OrderModel.fromEntity(
+      _orders[index]
+          .copyWith(status: OrderStatus.diproses, officerName: officerName),
+    );
+    _orders[index] = updated;
+    return updated;
   }
 
   @override

@@ -26,6 +26,8 @@ abstract class OrderRepository {
     required DateTime pickupDate,
     required VehicleType vehicleType,
     String? note,
+    String? customerId,
+    String? customerName,
     String? photoPath,
     double? latitude,
     double? longitude,
@@ -40,6 +42,9 @@ abstract class OrderRepository {
         vehicleType: vehicleType,
         note: note,
       );
+
+  Future<OrderEntity> assignOrder(
+      {required String orderId, required String officerName});
 
   Future<OrderEntity> cancelOrder(String orderId);
 

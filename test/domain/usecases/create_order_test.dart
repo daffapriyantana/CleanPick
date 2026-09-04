@@ -47,6 +47,8 @@ class _FakeOrderRepository implements OrderRepository {
     required DateTime pickupDate,
     required VehicleType vehicleType,
     String? note,
+    String? customerId,
+    String? customerName,
     String? photoPath,
     double? latitude,
     double? longitude,
@@ -74,6 +76,10 @@ class _FakeOrderRepository implements OrderRepository {
 
   @override
   Future<OrderEntity> payOrder(String orderId) => throw UnimplementedError();
+
+  @override
+  Future<OrderEntity> assignOrder({required String orderId, required String officerName}) =>
+      throw UnimplementedError();
 }
 
 void main() {

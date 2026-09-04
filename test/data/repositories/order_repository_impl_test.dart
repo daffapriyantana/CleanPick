@@ -24,6 +24,9 @@ class _FakeDataSource implements OrderLocalDataSource {
   Future<OrderModel> createOrder(OrderModel order) async => order;
 
   @override
+  Future<OrderModel> assignOrder({required String orderId, required String officerName}) async => orders.first;
+
+  @override
   Future<OrderModel> getOrderDetail(String orderId) async {
     if (shouldThrow) throw const ServerException('Pesanan tidak ditemukan');
     return orders.first;
