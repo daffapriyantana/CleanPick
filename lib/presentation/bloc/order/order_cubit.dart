@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
 import '../../../domain/usecases/calculate_order_price.dart';
+import '../../../domain/usecases/complete_order.dart';
 import '../../../domain/usecases/cancel_order.dart';
 import '../../../domain/usecases/create_order.dart';
 import '../../../domain/usecases/assign_order.dart';
@@ -24,6 +25,7 @@ class OrderCubit extends Cubit<OrderState> {
   final PayOrder payOrder;
   final AssignOrder assignOrder;
   final CalculateOrderPrice calculatePrice;
+  final CompleteOrder completeOrder;
 
   OrderCubit({
     required this.getOrders,
@@ -32,6 +34,7 @@ class OrderCubit extends Cubit<OrderState> {
     required this.cancelOrder,
     required this.payOrder,
     required this.assignOrder,
+    required this.completeOrder,
     CalculateOrderPrice? calculatePrice,
   })  : calculatePrice = calculatePrice ?? const CalculateOrderPrice(),
         super(const OrderInitial());
@@ -156,6 +159,18 @@ class OrderCubit extends Cubit<OrderState> {
       emit(OrderFailure(e.message));
     } catch (e) {
       emit(OrderFailure('Gagal memproses pembayaran: $e'));
+    }
+  }
+
+  Future<void> complete(String orderId) async {
+    emit(const OrderLoading());
+    try {
+      final order = await completeOrder(orderId);
+      emit(OrderCreated(order));
+    } on Failure catch (e) {
+      emit(OrderFailure(e.message));
+    } catch (e) {
+      emit(OrderFailure('Gagal menyelesaikan pesanan: $e'));
     }
   }
 }

@@ -9,6 +9,7 @@ import '../bloc/auth/auth_state.dart';
 import '../bloc/order/order_cubit.dart';
 import '../bloc/order/order_state.dart';
 import 'petugas_income_page.dart';
+import 'petugas_order_detail_page.dart';
 import 'petugas_orders_page.dart';
 
 class PetugasDashboardPage extends StatefulWidget {
@@ -215,7 +216,6 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
-
 }
 
 class _LivePetugasHome extends StatelessWidget {
@@ -229,8 +229,14 @@ class _LivePetugasHome extends StatelessWidget {
     return BlocConsumer<OrderCubit, OrderState>(
       listener: (context, state) {
         if (state is OrderFailure) onMessage(state.message);
-        if (state is OrderCreated && state.order.status == OrderStatus.diproses) {
+        if (state is OrderCreated &&
+            state.order.status == OrderStatus.diproses) {
           onMessage('Pesanan ${state.order.id} berhasil diambil');
+          context.read<OrderCubit>().loadOrders();
+        }
+        if (state is OrderCreated &&
+            state.order.status == OrderStatus.selesai) {
+          onMessage('Pesanan ${state.order.id} selesai');
           context.read<OrderCubit>().loadOrders();
         }
       },
@@ -262,7 +268,13 @@ class _LivePetugasHome extends StatelessWidget {
               if (active.isEmpty)
                 const _EmptyLiveOrder(message: 'Belum ada pesanan aktif')
               else
-                ...active.map((order) => _LiveOrderCard(order: order, active: true)),
+                ...active.map((order) => _LiveOrderCard(
+                      order: order,
+                      active: true,
+                      onDetails: () => _openOrderDetail(context, order),
+                      onComplete: () =>
+                          context.read<OrderCubit>().complete(order.id),
+                    )),
               const SizedBox(height: 22),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -282,6 +294,7 @@ class _LivePetugasHome extends StatelessWidget {
                 ...incoming.map((order) => _LiveOrderCard(
                       order: order,
                       active: false,
+                      onDetails: () => _openOrderDetail(context, order),
                       onTake: () => context.read<OrderCubit>().takeOrder(
                             orderId: order.id,
                             officerName: officerName,
@@ -293,14 +306,44 @@ class _LivePetugasHome extends StatelessWidget {
       },
     );
   }
+
+  void _openOrderDetail(BuildContext context, OrderEntity order) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => PetugasOrderDetailPage(
+        orderId: order.id,
+        customerName: order.customerName ?? 'Customer CleanPick',
+        address: order.address,
+        distance: '${order.distanceFee.toStringAsFixed(0)} km',
+        wasteType: order.wasteType.label,
+        vehicleType: order.vehicleType.label,
+        vehicleFee: 'Rp ${order.baseFee.toStringAsFixed(0)}',
+        distanceFee: 'Rp ${order.distanceFee.toStringAsFixed(0)}',
+        total: 'Rp ${order.totalPrice.toStringAsFixed(0)}',
+        photoPath: order.photoPath,
+        latitude: order.latitude,
+        longitude: order.longitude,
+        paymentMethod: order.paymentMethod,
+        onCompleted: () => context.read<OrderCubit>().complete(order.id),
+        onCancelled: () => context.read<OrderCubit>().cancel(order.id),
+      ),
+    ));
+  }
 }
 
 class _LiveOrderCard extends StatelessWidget {
   final OrderEntity order;
   final bool active;
   final VoidCallback? onTake;
+  final VoidCallback? onDetails;
+  final VoidCallback? onComplete;
 
-  const _LiveOrderCard({required this.order, required this.active, this.onTake});
+  const _LiveOrderCard({
+    required this.order,
+    required this.active,
+    this.onTake,
+    this.onDetails,
+    this.onComplete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -310,7 +353,8 @@ class _LiveOrderCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: active ? AppColors.primary : AppColors.border),
+        border:
+            Border.all(color: active ? AppColors.primary : AppColors.border),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
@@ -322,26 +366,52 @@ class _LiveOrderCard extends StatelessWidget {
           ),
           _Pill(
             label: active ? 'Diproses' : 'Menunggu',
-            background: active ? const Color(0xFFDBEAFE) : const Color(0xFFFEF3C7),
-            foreground: active ? const Color(0xFF2563EB) : const Color(0xFFD97706),
+            background:
+                active ? const Color(0xFFDBEAFE) : const Color(0xFFFEF3C7),
+            foreground:
+                active ? const Color(0xFF2563EB) : const Color(0xFFD97706),
           ),
         ]),
         const SizedBox(height: 9),
-        Text(order.address, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+        Text(order.address,
+            style:
+                const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
         const SizedBox(height: 6),
-        Text('${order.wasteType.label} • ${order.vehicleType.label} • Rp ${order.totalPrice.toStringAsFixed(0)}',
+        Text(
+            '${order.wasteType.label} • ${order.vehicleType.label} • Rp ${order.totalPrice.toStringAsFixed(0)}',
             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-        if (!active) ...[
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: onTake,
-              icon: const Icon(Icons.assignment_turned_in_outlined, size: 17),
-              label: const Text('Ambil Pesanan'),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onDetails,
+                icon: const Icon(Icons.article_outlined, size: 17),
+                label: const Text('Detail Pesanan'),
+              ),
             ),
-          ),
-        ],
+            if (!active) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: onTake,
+                  icon:
+                      const Icon(Icons.assignment_turned_in_outlined, size: 17),
+                  label: const Text('Ambil'),
+                ),
+              ),
+            ] else ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: onComplete,
+                  icon: const Icon(Icons.check_circle_outline, size: 17),
+                  label: const Text('Selesai'),
+                ),
+              ),
+            ],
+          ],
+        ),
       ]),
     );
   }
@@ -354,7 +424,9 @@ class _EmptyLiveOrder extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(child: Text(message, style: const TextStyle(color: AppColors.textSecondary))),
+        child: Center(
+            child: Text(message,
+                style: const TextStyle(color: AppColors.textSecondary))),
       );
 }
 

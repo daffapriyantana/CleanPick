@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
@@ -89,6 +91,48 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
     setState(() => _isPickingLocation = false);
   }
 
+  Future<void> _useCurrentLocation() async {
+    setState(() => _isPickingLocation = true);
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        _showMessage('Aktifkan layanan lokasi perangkat terlebih dahulu');
+        return;
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _showMessage('Izin lokasi diperlukan untuk mengambil lokasi sekarang');
+        return;
+      }
+      final position = await Geolocator.getCurrentPosition();
+      var address =
+          '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
+      try {
+        final placemarks = await placemarkFromCoordinates(
+            position.latitude, position.longitude);
+        if (placemarks.isNotEmpty) {
+          final place = placemarks.first;
+          address = [place.street, place.subLocality, place.locality]
+              .whereType<String>()
+              .where((value) => value.trim().isNotEmpty)
+              .join(', ');
+        }
+      } catch (_) {}
+      if (!mounted) return;
+      setState(() {
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+        _addressController.text = address;
+      });
+      _recalculate();
+    } finally {
+      if (mounted) setState(() => _isPickingLocation = false);
+    }
+  }
+
   Future<void> _pickPhoto() async {
     setState(() => _isPickingPhoto = true);
     try {
@@ -139,18 +183,25 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
                   onChanged: (_) => _recalculate(),
                 ),
                 const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: _isPickingLocation ? null : _pickLocation,
-                  icon: _isPickingLocation
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.my_location_outlined),
-                  label: Text(_latitude == null
-                      ? 'Tentukan Titik Lokasi Saya'
-                      : 'Lokasi Pickup Dipilih'),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed:
+                            _isPickingLocation ? null : _useCurrentLocation,
+                        icon: const Icon(Icons.gps_fixed),
+                        label: const Text('Lokasi Sekarang'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isPickingLocation ? null : _pickLocation,
+                        icon: const Icon(Icons.map_outlined),
+                        label: const Text('Pilih di Peta'),
+                      ),
+                    ),
+                  ],
                 ),
                 if (_latitude != null && _longitude != null)
                   Padding(

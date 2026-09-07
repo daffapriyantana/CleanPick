@@ -32,7 +32,7 @@ Atau buat akun baru lewat halaman **Daftar**.
 ```
 lib/
 ├── core/            # error handling, constants, utils, theme (dipakai semua layer)
-├── data/            # models (JSON-ready), datasources (in-memory), repository impl
+├── data/            # models, persistent datasources, sync service, repository impl
 ├── domain/          # entities, repository interface, use cases (business logic murni)
 └── presentation/    # pages, reusable widgets, BLoC/Cubit (state management)
 ```
@@ -77,6 +77,17 @@ Ada di folder `test/`, mencakup 4 skenario minimum dari spesifikasi:
 Ditambah `test/data/repositories/order_repository_impl_test.dart` untuk
 memverifikasi repository menerjemahkan exception datasource menjadi `Failure`
 domain dengan benar.
+
+## Milestone 4: Offline-First & Local Cache
+
+- Sesi pengguna, akun terdaftar, password lokal, dan status subscription
+  disimpan melalui `FlutterSecureStorage`.
+- Pesanan disimpan sebagai cache JSON di `SharedPreferences`, sehingga tetap
+  dapat dibaca dan ditulis setelah aplikasi dimulai ulang tanpa internet.
+- Mutasi pesanan dicatat dalam antrean sinkronisasi durable. `OfflineSyncService`
+  memantau `connectivity_plus` dan memproses antrean saat koneksi kembali.
+- Boundary sinkronisasi siap dihubungkan ke API/Firebase; repository dan use
+  case tidak perlu berubah ketika remote datasource ditambahkan.
 
 ## Catatan
 

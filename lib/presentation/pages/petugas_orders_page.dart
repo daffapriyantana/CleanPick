@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../domain/entities/order_entity.dart';
+import '../bloc/auth/auth_cubit.dart';
+import '../bloc/auth/auth_state.dart';
+import '../bloc/order/order_cubit.dart';
+import '../bloc/order/order_state.dart';
+import 'petugas_order_detail_page.dart';
 
 class PetugasOrdersView extends StatefulWidget {
   final ValueChanged<String> onMessage;
@@ -12,118 +20,135 @@ class PetugasOrdersView extends StatefulWidget {
 
 class _PetugasOrdersViewState extends State<PetugasOrdersView> {
   bool _showCompleted = false;
-  final Set<String> _handledOrders = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<OrderCubit>().loadOrders();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          color: AppColors.primaryDark,
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Pesanan',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                      child: _TabButton(
-                          label: 'Aktif',
-                          selected: !_showCompleted,
-                          onPressed: () =>
-                              setState(() => _showCompleted = false))),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: _TabButton(
-                          label: 'Selesai',
-                          selected: _showCompleted,
-                          onPressed: () =>
-                              setState(() => _showCompleted = true))),
-                ],
+    return Column(children: [
+      _OrdersHeader(
+        completed: _showCompleted,
+        onChanged: (value) => setState(() => _showCompleted = value),
+      ),
+      Expanded(
+        child: BlocConsumer<OrderCubit, OrderState>(
+          listener: (context, state) {
+            if (state is OrderFailure) widget.onMessage(state.message);
+            if (state is OrderCreated) {
+              widget.onMessage('Status pesanan diperbarui');
+              context.read<OrderCubit>().loadOrders();
+            }
+          },
+          builder: (context, state) {
+            if (state is OrderInitial || state is OrderLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (state is OrderFailure) {
+              return Center(child: Text(state.message));
+            }
+            if (state is! OrdersLoaded) return const SizedBox.shrink();
+            final orders = state.orders
+                .where((order) => _showCompleted
+                    ? order.status == OrderStatus.selesai
+                    : order.status != OrderStatus.selesai &&
+                        order.status != OrderStatus.dibatalkan)
+                .toList();
+            if (orders.isEmpty) {
+              return Center(
+                  child: Text(_showCompleted
+                      ? 'Belum ada pesanan selesai'
+                      : 'Tidak ada pesanan aktif'));
+            }
+            return RefreshIndicator(
+              onRefresh: () => context.read<OrderCubit>().loadOrders(),
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+                itemCount: orders.length,
+                itemBuilder: (_, index) => _OrderCard(
+                  order: orders[index],
+                  onDetails: () => _openDetails(orders[index]),
+                  onTake: orders[index].status == OrderStatus.menunggu
+                      ? () => _take(orders[index])
+                      : null,
+                  onComplete: orders[index].status == OrderStatus.diproses
+                      ? () =>
+                          context.read<OrderCubit>().complete(orders[index].id)
+                      : null,
+                ),
               ),
-            ],
-          ),
+            );
+          },
         ),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
-            child: _showCompleted ? _completedOrders() : _activeOrders(),
-          ),
-        ),
-      ],
-    );
+      ),
+    ]);
   }
 
-  Widget _activeOrders() {
-    final orders = [
-      const _OrderData(
-          name: 'Budi Santoso',
-          time: '5 menit yang lalu',
-          distance: '2.3 km',
-          location: 'Pondok Indah Mall, Area Pick-up Utara',
-          categories: ['Plastik', 'Kertas'],
-          price: 'Rp 45.000'),
-      const _OrderData(
-          name: 'Dewi Lestari',
-          time: '10 menit yang lalu',
-          distance: '4.1 km',
-          location: 'Jl. Melati Indah No. 12, Cilandak',
-          categories: ['Organik'],
-          price: 'Rp 30.000'),
-    ];
-    final visibleOrders =
-        orders.where((order) => !_handledOrders.contains(order.name)).toList();
-    if (visibleOrders.isEmpty) {
-      return const _EmptyOrders(message: 'Tidak ada pesanan aktif');
-    }
-    return Column(
-        children: visibleOrders
-            .map((order) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _ActiveOrderCard(order: order, onAction: _handleOrder)))
-            .toList());
+  void _take(OrderEntity order) {
+    final auth = context.read<AuthCubit>().state;
+    final name = auth is AuthSuccess ? auth.user.name : 'Ahmad';
+    context.read<OrderCubit>().takeOrder(orderId: order.id, officerName: name);
   }
 
-  Widget _completedOrders() {
-    const orders = [
-      _OrderData(
-          name: 'Budi Santoso',
-          time: 'Hari ini, 14:20',
-          location: 'Pondok Indah Mall, Area Pick-up Utara',
-          categories: ['Plastik', 'Kertas'],
-          price: 'Rp 45.000'),
-      _OrderData(
-          name: 'Siti Rahma',
-          time: 'Hari ini, 10:15',
-          location: 'Jl. Melati Indah No. 12, Cilandak',
-          categories: ['Organik'],
-          price: 'Rp 30.000'),
-      _OrderData(
-          name: 'Hendra Wijaya',
-          time: 'Kemarin, 16:45',
-          location: 'Kebayoran Heights Block C-5',
-          categories: ['Plastik', 'Kaca', 'Logam'],
-          price: 'Rp 65.000'),
-    ];
-    return Column(
-        children: orders
-            .map((order) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _CompletedOrderCard(order: order)))
-            .toList());
+  void _openDetails(OrderEntity order) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => PetugasOrderDetailPage(
+        orderId: order.id,
+        customerName: order.customerName ?? 'Customer CleanPick',
+        address: order.address,
+        distance: '${order.distanceFee.toStringAsFixed(0)} km',
+        wasteType: order.wasteType.label,
+        vehicleType: order.vehicleType.label,
+        vehicleFee: 'Rp ${order.baseFee.toStringAsFixed(0)}',
+        distanceFee: 'Rp ${order.distanceFee.toStringAsFixed(0)}',
+        total: 'Rp ${order.totalPrice.toStringAsFixed(0)}',
+        photoPath: order.photoPath,
+        latitude: order.latitude,
+        longitude: order.longitude,
+        paymentMethod: order.paymentMethod,
+        onCompleted: () => context.read<OrderCubit>().complete(order.id),
+        onCancelled: () => context.read<OrderCubit>().cancel(order.id),
+      ),
+    ));
   }
+}
 
-  void _handleOrder(String name, bool accepted) {
-    setState(() => _handledOrders.add(name));
-    widget.onMessage(
-        accepted ? 'Pesanan $name diterima' : 'Pesanan $name ditolak');
-  }
+class _OrdersHeader extends StatelessWidget {
+  final bool completed;
+  final ValueChanged<bool> onChanged;
+  const _OrdersHeader({required this.completed, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        color: AppColors.primaryDark,
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Pesanan',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          Row(children: [
+            Expanded(
+                child: _TabButton(
+                    label: 'Aktif',
+                    selected: !completed,
+                    onPressed: () => onChanged(false))),
+            const SizedBox(width: 12),
+            Expanded(
+                child: _TabButton(
+                    label: 'Selesai',
+                    selected: completed,
+                    onPressed: () => onChanged(true))),
+          ]),
+        ]),
+      );
 }
 
 class _TabButton extends StatelessWidget {
@@ -134,242 +159,78 @@ class _TabButton extends StatelessWidget {
       {required this.label, required this.selected, required this.onPressed});
 
   @override
-  Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        backgroundColor: selected ? AppColors.primary : Colors.transparent,
-        foregroundColor: Colors.white,
-        minimumSize: const Size.fromHeight(38),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-      ),
-      child: Text(label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-    );
-  }
-}
-
-class _OrderData {
-  final String name;
-  final String time;
-  final String? distance;
-  final String location;
-  final List<String> categories;
-  final String price;
-  const _OrderData(
-      {required this.name,
-      required this.time,
-      this.distance,
-      required this.location,
-      required this.categories,
-      required this.price});
-}
-
-class _ActiveOrderCard extends StatelessWidget {
-  final _OrderData order;
-  final void Function(String, bool) onAction;
-  const _ActiveOrderCard({required this.order, required this.onAction});
-
-  @override
-  Widget build(BuildContext context) {
-    return _OrderCardFrame(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(
-              child: Text(order.name,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.bold))),
-          Text('• ${order.time}',
-              style:
-                  const TextStyle(fontSize: 9, color: AppColors.textSecondary)),
-          const SizedBox(width: 8),
-          Text(order.distance!,
-              style: const TextStyle(
-                  fontSize: 10,
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold)),
-        ]),
-        const SizedBox(height: 10),
-        _LocationText(order.location),
-        const SizedBox(height: 9),
-        _CategoryWrap(categories: order.categories, includeMotor: true),
-        const Divider(height: 20),
-        Row(children: [
-          Text(order.price,
-              style:
-                  const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-          const Spacer(),
-          OutlinedButton(
-              onPressed: () => onAction(order.name, false),
-              style: _smallButtonStyle(AppColors.error),
-              child: const Text('Tolak')),
-          const SizedBox(width: 7),
-          ElevatedButton(
-              onPressed: () => onAction(order.name, true),
-              style: _smallButtonStyle(Colors.white),
-              child: const Text('Terima')),
-        ]),
-      ]),
-    );
-  }
-}
-
-class _CompletedOrderCard extends StatelessWidget {
-  final _OrderData order;
-  const _CompletedOrderCard({required this.order});
-
-  @override
-  Widget build(BuildContext context) {
-    return _OrderCardFrame(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(
-              child: Text(order.name,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.bold))),
-          Text('• ${order.time}',
-              style:
-                  const TextStyle(fontSize: 9, color: AppColors.textSecondary)),
-          const SizedBox(width: 8),
-          const _StatusPill(),
-        ]),
-        const SizedBox(height: 11),
-        _LocationText(order.location),
-        const SizedBox(height: 9),
-        _CategoryWrap(categories: order.categories),
-        const Divider(height: 20),
-        Row(children: [
-          const Text('Pendapatan',
-              style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-          const Spacer(),
-          Text(order.price,
-              style: const TextStyle(
-                  fontSize: 13,
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold)),
-        ]),
-      ]),
-    );
-  }
-}
-
-class _OrderCardFrame extends StatelessWidget {
-  final Widget child;
-  const _OrderCardFrame({required this.child});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(11),
-            border: Border.all(color: AppColors.border),
-            boxShadow: const [
-              BoxShadow(
-                  color: Color(0x0A000000), blurRadius: 5, offset: Offset(0, 2))
-            ]),
-        child: child,
+  Widget build(BuildContext context) => TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          backgroundColor: selected ? AppColors.primary : Colors.transparent,
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(38),
+        ),
+        child: Text(label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
       );
 }
 
-class _LocationText extends StatelessWidget {
-  final String location;
-  const _LocationText(this.location);
+class _OrderCard extends StatelessWidget {
+  final OrderEntity order;
+  final VoidCallback onDetails;
+  final VoidCallback? onTake;
+  final VoidCallback? onComplete;
+  const _OrderCard(
+      {required this.order,
+      required this.onDetails,
+      this.onTake,
+      this.onComplete});
 
   @override
-  Widget build(BuildContext context) => Row(children: [
-        const Icon(Icons.location_on_outlined,
-            size: 16, color: AppColors.textSecondary),
-        const SizedBox(width: 6),
-        Expanded(
-            child: Text(location,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+  Widget build(BuildContext context) => Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(
+                  child: Text(order.customerName ?? 'Customer CleanPick',
+                      style: const TextStyle(fontWeight: FontWeight.bold))),
+              Text(order.status.label,
+                  style: TextStyle(
+                      color: order.status.color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12)),
+            ]),
+            const SizedBox(height: 8),
+            Text(order.address,
                 style: const TextStyle(
-                    fontSize: 10, color: AppColors.textSecondary))),
-      ]);
+                    color: AppColors.textSecondary, fontSize: 12)),
+            const SizedBox(height: 6),
+            Text('${order.wasteType.label} • ${order.vehicleType.label}'),
+            const SizedBox(height: 6),
+            Text('Rp ${order.totalPrice.toStringAsFixed(0)}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(
+                  child: OutlinedButton.icon(
+                      onPressed: onDetails,
+                      icon: const Icon(Icons.article_outlined, size: 17),
+                      label: const Text('Detail Pesanan'))),
+              if (onTake != null) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                    child: ElevatedButton(
+                        onPressed: onTake, child: const Text('Ambil'))),
+              ],
+              if (onComplete != null) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                    child: ElevatedButton.icon(
+                        onPressed: onComplete,
+                        icon: const Icon(Icons.check, size: 17),
+                        label: const Text('Selesai'))),
+              ],
+            ]),
+          ]),
+        ),
+      );
 }
-
-class _CategoryWrap extends StatelessWidget {
-  final List<String> categories;
-  final bool includeMotor;
-  const _CategoryWrap({required this.categories, this.includeMotor = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final values = [...categories, if (includeMotor) 'Motor'];
-    return Wrap(
-        spacing: 5,
-        runSpacing: 4,
-        children: values.map((value) => _CategoryPill(value)).toList());
-  }
-}
-
-class _CategoryPill extends StatelessWidget {
-  final String value;
-  const _CategoryPill(this.value);
-
-  @override
-  Widget build(BuildContext context) {
-    final isVehicle = value == 'Motor';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-          color: isVehicle ? const Color(0xFFDBEAFE) : const Color(0xFFDCFCE7),
-          borderRadius: BorderRadius.circular(12)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (isVehicle)
-          const Icon(Icons.two_wheeler, size: 12, color: Color(0xFF2563EB)),
-        if (isVehicle) const SizedBox(width: 3),
-        Text(value,
-            style: TextStyle(
-                fontSize: 9,
-                color: isVehicle
-                    ? const Color(0xFF2563EB)
-                    : const Color(0xFF15803D),
-                fontWeight: FontWeight.w600)),
-      ]),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill();
-
-  @override
-  Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-          color: const Color(0xFFDCFCE7),
-          borderRadius: BorderRadius.circular(12)),
-      child: const Text('Selesai',
-          style: TextStyle(
-              fontSize: 9,
-              color: Color(0xFF15803D),
-              fontWeight: FontWeight.bold)));
-}
-
-class _EmptyOrders extends StatelessWidget {
-  final String message;
-  const _EmptyOrders({required this.message});
-
-  @override
-  Widget build(BuildContext context) => Center(
-      child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Text(message,
-              style: const TextStyle(color: AppColors.textSecondary))));
-}
-
-ButtonStyle _smallButtonStyle(Color foreground) => ElevatedButton.styleFrom(
-    foregroundColor: foreground,
-    backgroundColor:
-        foreground == Colors.white ? AppColors.primary : Colors.white,
-    minimumSize: const Size(68, 34),
-    padding: const EdgeInsets.symmetric(horizontal: 10),
-    side: foreground == AppColors.error
-        ? const BorderSide(color: AppColors.error)
-        : null,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
-    textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold));

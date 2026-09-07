@@ -143,4 +143,13 @@ class OrderRepositoryImpl implements OrderRepository {
       throw ServerFailure(e.message);
     }
   }
+
+  @override
+  Future<OrderEntity> completeOrder(String orderId) async {
+    try {
+      return await dataSource.completeOrder(orderId);
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
 }

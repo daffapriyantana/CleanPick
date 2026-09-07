@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 
 class PetugasOrderDetailPage extends StatefulWidget {
+  final String orderId;
   final String customerName;
   final String address;
   final String distance;
@@ -24,6 +25,7 @@ class PetugasOrderDetailPage extends StatefulWidget {
 
   const PetugasOrderDetailPage({
     super.key,
+    required this.orderId,
     required this.customerName,
     required this.address,
     required this.distance,
@@ -96,12 +98,12 @@ class _PetugasOrderDetailPageState extends State<PetugasOrderDetailPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _Caption('ID Pesanan'),
-                      SizedBox(height: 2),
-                      Text('CP-98218A', style: _strongText),
+                      const _Caption('ID Pesanan'),
+                      const SizedBox(height: 2),
+                      Text(widget.orderId, style: _strongText),
                     ],
                   ),
                   _StatusPill(label: statusLabel),

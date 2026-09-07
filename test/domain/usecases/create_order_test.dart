@@ -76,9 +76,13 @@ class _FakeOrderRepository implements OrderRepository {
 
   @override
   Future<OrderEntity> payOrder(String orderId) => throw UnimplementedError();
+  @override
+  Future<OrderEntity> completeOrder(String orderId) async =>
+      throw UnimplementedError();
 
   @override
-  Future<OrderEntity> assignOrder({required String orderId, required String officerName}) =>
+  Future<OrderEntity> assignOrder(
+          {required String orderId, required String officerName}) =>
       throw UnimplementedError();
 }
 

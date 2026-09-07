@@ -49,4 +49,7 @@ abstract class OrderRepository {
   Future<OrderEntity> cancelOrder(String orderId);
 
   Future<OrderEntity> payOrder(String orderId);
+
+  Future<OrderEntity> completeOrder(String orderId) =>
+      throw UnimplementedError();
 }

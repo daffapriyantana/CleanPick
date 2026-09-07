@@ -24,7 +24,9 @@ class _FakeDataSource implements OrderLocalDataSource {
   Future<OrderModel> createOrder(OrderModel order) async => order;
 
   @override
-  Future<OrderModel> assignOrder({required String orderId, required String officerName}) async => orders.first;
+  Future<OrderModel> assignOrder(
+          {required String orderId, required String officerName}) async =>
+      orders.first;
 
   @override
   Future<OrderModel> getOrderDetail(String orderId) async {
@@ -37,6 +39,8 @@ class _FakeDataSource implements OrderLocalDataSource {
 
   @override
   Future<OrderModel> payOrder(String orderId) async => orders.first;
+  @override
+  Future<OrderModel> completeOrder(String orderId) async => orders.first;
 }
 
 void main() {

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../domain/entities/order_entity.dart';
+import '../bloc/order/order_cubit.dart';
+import '../bloc/order/order_state.dart';
 
 class PetugasIncomeView extends StatefulWidget {
   const PetugasIncomeView({super.key});
@@ -60,13 +65,78 @@ class _PetugasIncomeViewState extends State<PetugasIncomeView> {
             padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 220),
-              child: _isMonthly
-                  ? const _MonthlyIncomeContent()
-                  : const _WeeklyIncomeContent(),
+              child: _DynamicIncomeContent(isMonthly: _isMonthly),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DynamicIncomeContent extends StatelessWidget {
+  final bool isMonthly;
+  const _DynamicIncomeContent({required this.isMonthly});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<OrderCubit, OrderState>(
+      builder: (context, state) {
+        final orders = state is OrdersLoaded
+            ? state.orders
+                .where((order) => order.status == OrderStatus.selesai)
+                .toList()
+            : <OrderEntity>[];
+        final now = DateTime.now();
+        final filtered = orders.where((order) {
+          final difference = now.difference(order.createdAt).inDays;
+          return isMonthly ? difference < 31 : difference < 7;
+        }).toList();
+        final total =
+            filtered.fold<double>(0, (sum, order) => sum + order.totalPrice);
+        return Column(
+          key: ValueKey(isMonthly),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _IncomeSummaryCard(
+              title:
+                  isMonthly ? 'Pendapatan Bulan Ini' : 'Pendapatan Minggu Ini',
+              amount: 'Rp ${total.toStringAsFixed(0)}',
+              labels: const [],
+              values: const [],
+            ),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(
+                  child: _SmallSummaryCard(
+                      title: 'Order Selesai',
+                      value: '${filtered.length} Pesanan')),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: _SmallSummaryCard(
+                      title: 'Rata-rata',
+                      value: filtered.isEmpty
+                          ? 'Rp 0'
+                          : 'Rp ${(total / filtered.length).toStringAsFixed(0)}')),
+            ]),
+            const SizedBox(height: 22),
+            const _SectionHeading('Transaksi Selesai'),
+            const SizedBox(height: 10),
+            if (filtered.isEmpty)
+              const Text('Belum ada order selesai pada periode ini',
+                  style: TextStyle(color: AppColors.textSecondary))
+            else
+              ...filtered.map((order) => _TransactionCard(
+                    time:
+                        '${order.createdAt.hour.toString().padLeft(2, '0')}:${order.createdAt.minute.toString().padLeft(2, '0')}',
+                    name: order.customerName ?? 'Customer CleanPick',
+                    detail:
+                        '${order.wasteType.label} - ${order.vehicleType.label}',
+                    income: '+Rp ${order.totalPrice.toStringAsFixed(0)}',
+                  )),
+          ],
+        );
+      },
     );
   }
 }
@@ -94,6 +164,7 @@ class _PeriodButton extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _WeeklyIncomeContent extends StatelessWidget {
   const _WeeklyIncomeContent();
 
@@ -143,6 +214,7 @@ class _WeeklyIncomeContent extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _MonthlyIncomeContent extends StatelessWidget {
   const _MonthlyIncomeContent();
 
