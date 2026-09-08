@@ -28,6 +28,10 @@ class AuthLoggedOut extends AuthState {
   const AuthLoggedOut();
 }
 
+class AuthPasswordResetSent extends AuthState {
+  const AuthPasswordResetSent();
+}
+
 class AuthFailureState extends AuthState {
   final String message;
   const AuthFailureState(this.message);
