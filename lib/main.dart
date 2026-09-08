@@ -1,10 +1,13 @@
+import 'package:firebase_core/firebase_core.dart';
+
+import 'firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/theme/app_theme.dart';
-import 'data/datasources/auth_local_datasource.dart';
+import 'data/datasources/firebase_auth_datasource.dart';
 import 'data/datasources/order_local_datasource.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'data/repositories/order_repository_impl.dart';
@@ -42,7 +45,7 @@ class AppDependencies {
   static Future<AppDependencies> build() async {
     final preferences = await SharedPreferences.getInstance();
     final orderDataSource = OrderLocalDataSourceImpl(preferences: preferences);
-    final authDataSource = AuthLocalDataSourceImpl();
+    final authDataSource = FirebaseAuthDataSource();
     await authDataSource.initialize();
 
     final offlineSyncService =
@@ -61,8 +64,18 @@ class AppDependencies {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   await initializeDateFormatting('id_ID', null);
-  runApp(CleanPickApp(dependencies: await AppDependencies.build()));
+
+  runApp(
+    CleanPickApp(
+      dependencies: await AppDependencies.build(),
+    ),
+  );
 }
 
 class CleanPickApp extends StatelessWidget {
