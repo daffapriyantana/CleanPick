@@ -17,13 +17,16 @@ class OrderModel extends OrderEntity {
     required super.paymentStatus,
     required super.createdAt,
     super.note,
-    super.customerId,
-    super.customerName,
     super.officerName,
     super.photoPath,
     super.latitude,
     super.longitude,
     super.paymentMethod,
+    super.wasteTypes,
+    super.customerId,
+    super.customerName,
+    super.officerRating,
+    super.complaint,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -42,13 +45,19 @@ class OrderModel extends OrderEntity {
       paymentStatus: PaymentStatus.values[json['paymentStatus'] as int],
       createdAt: DateTime.parse(json['createdAt'] as String),
       note: json['note'] as String?,
-      customerId: json['customerId'] as String?,
-      customerName: json['customerName'] as String?,
       officerName: json['officerName'] as String?,
       photoPath: json['photoPath'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       paymentMethod: PaymentMethod.values[json['paymentMethod'] as int? ?? 0],
+      wasteTypes: (json['wasteTypes'] as List<dynamic>?)
+              ?.map((value) => WasteType.values[value as int])
+              .toList() ??
+          const [],
+      customerId: json['customerId'] as String?,
+      customerName: json['customerName'] as String?,
+      officerRating: json['officerRating'] as int?,
+      complaint: json['complaint'] as String?,
     );
   }
 
@@ -67,13 +76,16 @@ class OrderModel extends OrderEntity {
         'paymentStatus': paymentStatus.index,
         'createdAt': createdAt.toIso8601String(),
         'note': note,
-        'customerId': customerId,
-        'customerName': customerName,
         'officerName': officerName,
         'photoPath': photoPath,
         'latitude': latitude,
         'longitude': longitude,
         'paymentMethod': paymentMethod.index,
+        'wasteTypes': wasteTypes.map((type) => type.index).toList(),
+        'customerId': customerId,
+        'customerName': customerName,
+        'officerRating': officerRating,
+        'complaint': complaint,
       };
 
   factory OrderModel.fromEntity(OrderEntity e) => OrderModel(
@@ -91,12 +103,15 @@ class OrderModel extends OrderEntity {
         paymentStatus: e.paymentStatus,
         createdAt: e.createdAt,
         note: e.note,
-        customerId: e.customerId,
-        customerName: e.customerName,
         officerName: e.officerName,
         photoPath: e.photoPath,
         latitude: e.latitude,
         longitude: e.longitude,
         paymentMethod: e.paymentMethod,
+        wasteTypes: e.wasteTypes,
+        customerId: e.customerId,
+        customerName: e.customerName,
+        officerRating: e.officerRating,
+        complaint: e.complaint,
       );
 }

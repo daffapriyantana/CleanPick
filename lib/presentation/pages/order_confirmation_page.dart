@@ -10,9 +10,11 @@ import '../../domain/usecases/calculate_order_price.dart';
 import '../bloc/order/order_cubit.dart';
 import '../bloc/order/order_state.dart';
 import 'order_detail_page.dart';
+import 'finding_officer_page.dart';
 
 class OrderDraft {
   final WasteType wasteType;
+  final List<WasteType> wasteTypes;
   final double weightKg;
   final String address;
   final DateTime pickupDate;
@@ -25,6 +27,7 @@ class OrderDraft {
 
   const OrderDraft(
       {required this.wasteType,
+      this.wasteTypes = const [],
       required this.weightKg,
       required this.address,
       required this.pickupDate,
@@ -64,6 +67,7 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
     final price = const CalculateOrderPrice().call(
       weightKg: widget.draft.weightKg,
       wasteType: widget.draft.wasteType,
+      wasteTypes: widget.draft.wasteTypes,
       vehicleType: widget.draft.vehicleType,
       distanceKm: widget.draft.distanceKm,
     );
@@ -75,8 +79,16 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
       body: BlocListener<OrderCubit, OrderState>(
         listener: (context, state) {
           if (state is OrderCreated) {
-            Navigator.of(context).pushReplacement(MaterialPageRoute(
-                builder: (_) => OrderDetailPage(orderId: state.order.id)));
+            final orderId = state.order.id;
+            Navigator.of(context)
+                .push(MaterialPageRoute(
+                    builder: (_) => const FindingOfficerPage()))
+                .then((_) {
+              if (context.mounted) {
+                Navigator.of(context).pushReplacement(MaterialPageRoute(
+                    builder: (_) => OrderDetailPage(orderId: orderId)));
+              }
+            });
           } else if (state is OrderFailure) {
             setState(() => _submitting = false);
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -96,7 +108,7 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
               _InfoCard(
                   title: 'Detail Sampah',
                   value:
-                      '${widget.draft.wasteType.label} - ${widget.draft.weightKg} kg\n${widget.draft.vehicleType.label}',
+                      '${widget.draft.wasteTypes.isEmpty ? widget.draft.wasteType.label : widget.draft.wasteTypes.map((type) => type.label).join(', ')} - ${widget.draft.weightKg} kg\n${widget.draft.vehicleType.label}',
                   icon: Icons.recycling_outlined),
               if (widget.draft.note != null)
                 _InfoCard(
@@ -199,6 +211,7 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
     final user = authState is AuthSuccess ? authState.user : null;
     context.read<OrderCubit>().submitOrder(
           wasteType: widget.draft.wasteType,
+          wasteTypes: widget.draft.wasteTypes,
           weightKg: widget.draft.weightKg,
           address: widget.draft.address,
           pickupDate: widget.draft.pickupDate,

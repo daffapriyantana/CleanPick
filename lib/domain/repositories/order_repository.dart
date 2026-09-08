@@ -26,13 +26,14 @@ abstract class OrderRepository {
     required DateTime pickupDate,
     required VehicleType vehicleType,
     String? note,
-    String? customerId,
-    String? customerName,
     String? photoPath,
     double? latitude,
     double? longitude,
     PaymentMethod paymentMethod = PaymentMethod.codTunai,
     double distanceKm = 0,
+    List<WasteType>? wasteTypes,
+    String? customerId,
+    String? customerName,
   }) =>
       createOrder(
         wasteType: wasteType,
@@ -43,13 +44,12 @@ abstract class OrderRepository {
         note: note,
       );
 
+  Future<OrderEntity> cancelOrder(String orderId);
+
   Future<OrderEntity> assignOrder(
       {required String orderId, required String officerName});
 
-  Future<OrderEntity> cancelOrder(String orderId);
+  Future<OrderEntity> completeOrder(String orderId);
 
   Future<OrderEntity> payOrder(String orderId);
-
-  Future<OrderEntity> completeOrder(String orderId) =>
-      throw UnimplementedError();
 }

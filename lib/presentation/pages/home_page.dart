@@ -11,9 +11,9 @@ import '../bloc/order/order_cubit.dart';
 import '../bloc/order/order_state.dart';
 import '../widgets/loading_widget.dart';
 import 'create_order_page.dart';
-import 'history_page.dart';
 import 'orders_page.dart';
 import 'profile_page.dart';
+import 'customer_support_pages.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,7 +28,7 @@ class _HomePageState extends State<HomePage> {
   final _pages = const [
     _HomeTab(),
     OrdersPage(embedded: true),
-    HistoryPage(embedded: true),
+    CustomerNotificationsPage(),
     ProfilePage(embedded: true)
   ];
 

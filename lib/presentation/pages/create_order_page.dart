@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:geolocator/geolocator.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
@@ -31,6 +29,7 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
   final _noteController = TextEditingController();
 
   WasteType? _wasteType = WasteType.organik;
+  final Set<WasteType> _selectedWasteTypes = {WasteType.organik};
   VehicleType _vehicleType = VehicleType.motorRoda3;
   DateTime? _pickupDate;
   double? _latitude;
@@ -51,6 +50,7 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
     context.read<OrderCubit>().previewPrice(
           weightKg: weight,
           wasteType: _wasteType!,
+          wasteTypes: _selectedWasteTypes.toList(),
           vehicleType: _vehicleType,
           distanceKm: _distanceKm,
         );
@@ -89,48 +89,6 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
       _recalculate();
     }
     setState(() => _isPickingLocation = false);
-  }
-
-  Future<void> _useCurrentLocation() async {
-    setState(() => _isPickingLocation = true);
-    try {
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        _showMessage('Aktifkan layanan lokasi perangkat terlebih dahulu');
-        return;
-      }
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        _showMessage('Izin lokasi diperlukan untuk mengambil lokasi sekarang');
-        return;
-      }
-      final position = await Geolocator.getCurrentPosition();
-      var address =
-          '${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}';
-      try {
-        final placemarks = await placemarkFromCoordinates(
-            position.latitude, position.longitude);
-        if (placemarks.isNotEmpty) {
-          final place = placemarks.first;
-          address = [place.street, place.subLocality, place.locality]
-              .whereType<String>()
-              .where((value) => value.trim().isNotEmpty)
-              .join(', ');
-        }
-      } catch (_) {}
-      if (!mounted) return;
-      setState(() {
-        _latitude = position.latitude;
-        _longitude = position.longitude;
-        _addressController.text = address;
-      });
-      _recalculate();
-    } finally {
-      if (mounted) setState(() => _isPickingLocation = false);
-    }
   }
 
   Future<void> _pickPhoto() async {
@@ -182,26 +140,27 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
                       hintText: 'Masukkan alamat pengambilan'),
                   onChanged: (_) => _recalculate(),
                 ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _chooseSavedAddress,
+                    icon: const Icon(Icons.bookmark_border, size: 16),
+                    label: const Text('Pilih alamat tersimpan'),
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed:
-                            _isPickingLocation ? null : _useCurrentLocation,
-                        icon: const Icon(Icons.gps_fixed),
-                        label: const Text('Lokasi Sekarang'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _isPickingLocation ? null : _pickLocation,
-                        icon: const Icon(Icons.map_outlined),
-                        label: const Text('Pilih di Peta'),
-                      ),
-                    ),
-                  ],
+                OutlinedButton.icon(
+                  onPressed: _isPickingLocation ? null : _pickLocation,
+                  icon: _isPickingLocation
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.my_location_outlined),
+                  label: Text(_latitude == null
+                      ? 'Tentukan Titik Lokasi Saya'
+                      : 'Lokasi Pickup Dipilih'),
                 ),
                 if (_latitude != null && _longitude != null)
                   Padding(
@@ -218,12 +177,25 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
                   spacing: 8,
                   runSpacing: 8,
                   children: WasteType.values.map((type) {
-                    final selected = _wasteType == type;
-                    return ChoiceChip(
+                    return FilterChip(
                       label: Text(type.label),
-                      selected: selected,
-                      onSelected: (_) {
-                        setState(() => _wasteType = type);
+                      selected: _selectedWasteTypes.contains(type),
+                      onSelected: (value) {
+                        if (!value && _selectedWasteTypes.length == 1) {
+                          _showMessage('Pilih minimal satu jenis sampah');
+                          return;
+                        }
+                        setState(() {
+                          if (value) {
+                            _selectedWasteTypes.add(type);
+                          } else {
+                            _selectedWasteTypes.remove(type);
+                          }
+                          _wasteType = _selectedWasteTypes.first;
+                        });
+                        if (value && type == WasteType.b3) {
+                          _showB3Notice();
+                        }
                         _recalculate();
                       },
                     );
@@ -361,6 +333,7 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
       builder: (_) => OrderConfirmationPage(
         draft: OrderDraft(
           wasteType: _wasteType!,
+          wasteTypes: _selectedWasteTypes.toList(),
           weightKg: weight,
           address: _addressController.text,
           pickupDate: _pickupDate!,
@@ -373,6 +346,46 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
         ),
       ),
     ));
+  }
+
+  Future<void> _chooseSavedAddress() async {
+    const addresses = [
+      'Rumah - Jl. Melati No. 12, Jakarta Selatan',
+      'Kantor - Jl. Merdeka No. 45, Jakarta Pusat',
+    ];
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: addresses
+              .map((address) => ListTile(
+                    leading: const Icon(Icons.location_on_outlined),
+                    title: Text(address),
+                    onTap: () => Navigator.of(context).pop(address),
+                  ))
+              .toList(),
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _addressController.text = selected);
+  }
+
+  Future<void> _showB3Notice() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sampah B3 (Bahaya)'),
+        content: const Text(
+            'Sampah B3 membutuhkan penanganan khusus. Akan ada tambahan biaya penanganan sebesar 25% dari biaya sampah.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Saya Mengerti')),
+        ],
+      ),
+    );
   }
 
   Widget _sectionTitle(String text) => Padding(

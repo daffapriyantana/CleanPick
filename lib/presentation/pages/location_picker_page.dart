@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../core/constants/app_constants.dart';
@@ -26,9 +29,12 @@ class LocationPickerPage extends StatefulWidget {
 }
 
 class _LocationPickerPageState extends State<LocationPickerPage> {
+  final MapController _mapController = MapController();
+  StreamSubscription<Position>? _positionSubscription;
   late LatLng _selectedPoint;
   String _address = 'Geser peta dan letakkan pin di lokasi pickup';
   bool _loadingAddress = false;
+  bool _followCurrentLocation = false;
 
   @override
   void initState() {
@@ -38,6 +44,49 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
       widget.initialLongitude ?? kCleanPickDepotLongitude,
     );
     _reverseGeocode(_selectedPoint);
+  }
+
+  @override
+  void dispose() {
+    _positionSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _toggleCurrentLocation() async {
+    if (_followCurrentLocation) {
+      await _positionSubscription?.cancel();
+      setState(() => _followCurrentLocation = false);
+      return;
+    }
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Izin lokasi diperlukan')));
+      }
+      return;
+    }
+    setState(() => _followCurrentLocation = true);
+    final current = await Geolocator.getCurrentPosition();
+    if (!mounted) return;
+    final currentPoint = LatLng(current.latitude, current.longitude);
+    setState(() => _selectedPoint = currentPoint);
+    _mapController.move(currentPoint, 17);
+    _reverseGeocode(currentPoint);
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high, distanceFilter: 5),
+    ).listen((position) {
+      final point = LatLng(position.latitude, position.longitude);
+      if (!mounted) return;
+      setState(() => _selectedPoint = point);
+      _mapController.move(point, 17);
+      _reverseGeocode(point);
+    });
   }
 
   Future<void> _reverseGeocode(LatLng point) async {
@@ -76,6 +125,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
         children: [
           Expanded(
             child: FlutterMap(
+              mapController: _mapController,
               options: MapOptions(
                 initialCenter: _selectedPoint,
                 initialZoom: 15,
@@ -127,6 +177,16 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                   ],
                 ),
                 const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: _toggleCurrentLocation,
+                  icon: Icon(_followCurrentLocation
+                      ? Icons.location_disabled
+                      : Icons.my_location),
+                  label: Text(_followCurrentLocation
+                      ? 'Hentikan Lokasi Realtime'
+                      : 'Gunakan Lokasi Saat Ini Realtime'),
+                ),
+                const SizedBox(height: 8),
                 ElevatedButton(
                   onPressed: _loadingAddress
                       ? null

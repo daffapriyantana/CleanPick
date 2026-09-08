@@ -47,13 +47,14 @@ class _FakeOrderRepository implements OrderRepository {
     required DateTime pickupDate,
     required VehicleType vehicleType,
     String? note,
-    String? customerId,
-    String? customerName,
     String? photoPath,
     double? latitude,
     double? longitude,
     PaymentMethod paymentMethod = PaymentMethod.codTunai,
     double distanceKm = 0,
+    List<WasteType>? wasteTypes,
+    String? customerId,
+    String? customerName,
   }) =>
       createOrder(
         wasteType: wasteType,
@@ -68,6 +69,15 @@ class _FakeOrderRepository implements OrderRepository {
   Future<OrderEntity> cancelOrder(String orderId) => throw UnimplementedError();
 
   @override
+  Future<OrderEntity> assignOrder(
+          {required String orderId, required String officerName}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<OrderEntity> completeOrder(String orderId) =>
+      throw UnimplementedError();
+
+  @override
   Future<OrderEntity> getOrderDetail(String orderId) =>
       throw UnimplementedError();
 
@@ -76,14 +86,6 @@ class _FakeOrderRepository implements OrderRepository {
 
   @override
   Future<OrderEntity> payOrder(String orderId) => throw UnimplementedError();
-  @override
-  Future<OrderEntity> completeOrder(String orderId) async =>
-      throw UnimplementedError();
-
-  @override
-  Future<OrderEntity> assignOrder(
-          {required String orderId, required String officerName}) =>
-      throw UnimplementedError();
 }
 
 void main() {

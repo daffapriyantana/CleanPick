@@ -5,6 +5,8 @@ import '../../core/theme/app_theme.dart';
 import '../bloc/auth/auth_cubit.dart';
 import '../bloc/auth/auth_state.dart';
 import 'login_page.dart';
+import 'customer_profile_pages.dart';
+import 'customer_support_pages.dart';
 
 class ProfilePage extends StatelessWidget {
   final bool embedded;
@@ -23,15 +25,24 @@ class ProfilePage extends StatelessWidget {
               if (embedded)
                 const Padding(
                   padding: EdgeInsets.only(bottom: 12),
-                  child: Text('Profil', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  child: Text('Profil',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 ),
               Center(
                 child: Column(
                   children: [
-                    const CircleAvatar(radius: 40, backgroundColor: AppColors.primary, child: Icon(Icons.person, color: Colors.white, size: 40)),
+                    const CircleAvatar(
+                        radius: 40,
+                        backgroundColor: AppColors.primary,
+                        child:
+                            Icon(Icons.person, color: Colors.white, size: 40)),
                     const SizedBox(height: 12),
-                    Text(user?.name ?? '-', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-                    Text(user?.email ?? '-', style: const TextStyle(color: AppColors.textSecondary)),
+                    Text(user?.name ?? '-',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 17)),
+                    Text(user?.email ?? '-',
+                        style: const TextStyle(color: AppColors.textSecondary)),
                   ],
                 ),
               ),
@@ -50,17 +61,76 @@ class ProfilePage extends StatelessWidget {
                 child: Column(
                   children: [
                     ListTile(
+                      leading: const Icon(Icons.location_on_outlined),
+                      title: const Text('Alamat Tersimpan'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const SavedAddressesPage())),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.notifications_none),
+                      title: const Text('Pengaturan Notifikasi'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const NotificationSettingsPage())),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.help_outline),
+                      title: const Text('Bantuan & FAQ'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const HelpFaqPage())),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.description_outlined),
+                      title: const Text('Syarat & Ketentuan'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const CustomerInfoPage(
+                              title: 'Syarat & Ketentuan',
+                              content:
+                                  'Gunakan layanan CleanPick dengan memberikan data pickup yang benar. Pesanan dapat dibatalkan sesuai status dan ketentuan layanan.'))),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.shield_outlined),
+                      title: const Text('Kebijakan Privasi'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const CustomerInfoPage(
+                              title: 'Kebijakan Privasi',
+                              content:
+                                  'CleanPick menjaga data akun, alamat, lokasi, dan riwayat pesanan untuk keperluan layanan.'))),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.info_outline),
+                      title: const Text('Tentang Aplikasi'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const CustomerInfoPage(
+                              title: 'Tentang CleanPick',
+                              content:
+                                  'CleanPick membantu customer menjadwalkan pengangkutan sampah secara praktis dan transparan.'))),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
                       leading: const Icon(Icons.edit_outlined),
                       title: const Text('Edit Profil'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Fitur edit profil segera hadir')),
+                        const SnackBar(
+                            content: Text('Fitur edit profil segera hadir')),
                       ),
                     ),
                     const Divider(height: 1),
                     ListTile(
                       leading: const Icon(Icons.logout, color: AppColors.error),
-                      title: const Text('Logout', style: TextStyle(color: AppColors.error)),
+                      title: const Text('Logout',
+                          style: TextStyle(color: AppColors.error)),
                       onTap: () {
                         context.read<AuthCubit>().logout();
                         Navigator.of(context).pushAndRemoveUntil(
@@ -85,8 +155,10 @@ class ProfilePage extends StatelessWidget {
   Widget _tile(IconData icon, String label, String value) {
     return ListTile(
       leading: Icon(icon, color: AppColors.primary),
-      title: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-      subtitle: Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(label,
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+      subtitle:
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
     );
   }
 }

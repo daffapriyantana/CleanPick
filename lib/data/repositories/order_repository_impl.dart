@@ -68,13 +68,14 @@ class OrderRepositoryImpl implements OrderRepository {
     required DateTime pickupDate,
     required VehicleType vehicleType,
     String? note,
-    String? customerId,
-    String? customerName,
     String? photoPath,
     double? latitude,
     double? longitude,
     PaymentMethod paymentMethod = PaymentMethod.codTunai,
     double distanceKm = 0,
+    List<WasteType>? wasteTypes,
+    String? customerId,
+    String? customerName,
   }) async {
     // Business rule (fee calculation) lives in the domain use case;
     // the repository only orchestrates data flow.
@@ -82,6 +83,7 @@ class OrderRepositoryImpl implements OrderRepository {
       weightKg: weightKg,
       wasteType: wasteType,
       vehicleType: vehicleType,
+      wasteTypes: wasteTypes,
       distanceKm: distanceKm,
     );
 
@@ -100,16 +102,26 @@ class OrderRepositoryImpl implements OrderRepository {
       paymentStatus: PaymentStatus.belumBayar,
       createdAt: DateTime.now(),
       note: note,
-      customerId: customerId,
-      customerName: customerName,
       photoPath: photoPath,
       latitude: latitude,
       longitude: longitude,
       paymentMethod: paymentMethod,
+      wasteTypes: wasteTypes ?? const [],
+      customerId: customerId,
+      customerName: customerName,
     );
 
     try {
       return await dataSource.createOrder(order);
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
+
+  @override
+  Future<OrderEntity> cancelOrder(String orderId) async {
+    try {
+      return await dataSource.cancelOrder(orderId);
     } on ServerException catch (e) {
       throw ServerFailure(e.message);
     }
@@ -127,9 +139,9 @@ class OrderRepositoryImpl implements OrderRepository {
   }
 
   @override
-  Future<OrderEntity> cancelOrder(String orderId) async {
+  Future<OrderEntity> completeOrder(String orderId) async {
     try {
-      return await dataSource.cancelOrder(orderId);
+      return await dataSource.completeOrder(orderId);
     } on ServerException catch (e) {
       throw ServerFailure(e.message);
     }
@@ -139,15 +151,6 @@ class OrderRepositoryImpl implements OrderRepository {
   Future<OrderEntity> payOrder(String orderId) async {
     try {
       return await dataSource.payOrder(orderId);
-    } on ServerException catch (e) {
-      throw ServerFailure(e.message);
-    }
-  }
-
-  @override
-  Future<OrderEntity> completeOrder(String orderId) async {
-    try {
-      return await dataSource.completeOrder(orderId);
     } on ServerException catch (e) {
       throw ServerFailure(e.message);
     }

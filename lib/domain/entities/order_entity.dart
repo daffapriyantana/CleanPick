@@ -16,13 +16,16 @@ class OrderEntity extends Equatable {
   final PaymentStatus paymentStatus;
   final DateTime createdAt;
   final String? note;
-  final String? customerId;
-  final String? customerName;
   final String? officerName;
   final String? photoPath;
   final double? latitude;
   final double? longitude;
   final PaymentMethod paymentMethod;
+  final List<WasteType> wasteTypes;
+  final String? customerId;
+  final String? customerName;
+  final int? officerRating;
+  final String? complaint;
 
   const OrderEntity({
     required this.id,
@@ -39,14 +42,20 @@ class OrderEntity extends Equatable {
     required this.paymentStatus,
     required this.createdAt,
     this.note,
-    this.customerId,
-    this.customerName,
     this.officerName,
     this.photoPath,
     this.latitude,
     this.longitude,
     this.paymentMethod = PaymentMethod.codTunai,
+    this.wasteTypes = const [],
+    this.customerId,
+    this.customerName,
+    this.officerRating,
+    this.complaint,
   });
+
+  List<WasteType> get selectedWasteTypes =>
+      wasteTypes.isEmpty ? [wasteType] : List.unmodifiable(wasteTypes);
 
   OrderEntity copyWith({
     OrderStatus? status,
@@ -56,8 +65,9 @@ class OrderEntity extends Equatable {
     double? latitude,
     double? longitude,
     PaymentMethod? paymentMethod,
-    String? customerId,
-    String? customerName,
+    List<WasteType>? wasteTypes,
+    int? officerRating,
+    String? complaint,
   }) {
     return OrderEntity(
       id: id,
@@ -74,13 +84,16 @@ class OrderEntity extends Equatable {
       paymentStatus: paymentStatus ?? this.paymentStatus,
       createdAt: createdAt,
       note: note,
-      customerId: customerId ?? this.customerId,
-      customerName: customerName ?? this.customerName,
       officerName: officerName ?? this.officerName,
       photoPath: photoPath ?? this.photoPath,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       paymentMethod: paymentMethod ?? this.paymentMethod,
+      wasteTypes: wasteTypes ?? this.wasteTypes,
+      customerId: customerId,
+      customerName: customerName,
+      officerRating: officerRating ?? this.officerRating,
+      complaint: complaint ?? this.complaint,
     );
   }
 
@@ -100,12 +113,15 @@ class OrderEntity extends Equatable {
         paymentStatus,
         createdAt,
         note,
-        customerId,
-        customerName,
         officerName,
         photoPath,
         latitude,
         longitude,
         paymentMethod,
+        wasteTypes,
+        customerId,
+        customerName,
+        officerRating,
+        complaint,
       ];
 }

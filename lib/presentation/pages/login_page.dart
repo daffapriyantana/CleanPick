@@ -9,6 +9,7 @@ import '../widgets/custom_text_field.dart';
 import 'home_page.dart';
 import 'register_page.dart';
 import 'petugas_login_page.dart';
+import 'admin_dashboard_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -183,8 +184,11 @@ class _LoginPageState extends State<LoginPage> {
                           child: OutlinedButton(
                             onPressed: isLoading
                                 ? null
-                                : () =>
-                                    _showMessage('Login admin belum tersedia'),
+                                : () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const AdminDashboardPage()),
+                                    ),
                             child: const Text('Masuk sebagai Admin',
                                 style: TextStyle(fontSize: 11)),
                           ),

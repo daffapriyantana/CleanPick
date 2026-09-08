@@ -5,9 +5,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
+import 'customer_support_pages.dart';
 
 class PetugasOrderDetailPage extends StatefulWidget {
-  final String orderId;
+  final String? orderId;
   final String customerName;
   final String address;
   final String distance;
@@ -25,7 +26,7 @@ class PetugasOrderDetailPage extends StatefulWidget {
 
   const PetugasOrderDetailPage({
     super.key,
-    required this.orderId,
+    this.orderId,
     required this.customerName,
     required this.address,
     required this.distance,
@@ -98,12 +99,12 @@ class _PetugasOrderDetailPageState extends State<PetugasOrderDetailPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
+                  const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _Caption('ID Pesanan'),
-                      const SizedBox(height: 2),
-                      Text(widget.orderId, style: _strongText),
+                      _Caption('ID Pesanan'),
+                      SizedBox(height: 2),
+                      Text('CP-98218A', style: _strongText),
                     ],
                   ),
                   _StatusPill(label: statusLabel),
@@ -133,8 +134,12 @@ class _PetugasOrderDetailPageState extends State<PetugasOrderDetailPage> {
                   _RoundAction(
                     icon: Icons.chat_bubble_outline,
                     tooltip: 'Kirim pesan',
-                    onPressed: () =>
-                        _showMessage(context, 'Pesan belum tersedia'),
+                    onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => OfficerChatPage(
+                                officerName: widget.customerName,
+                                orderId: widget.orderId ?? 'demo-order',
+                                isOfficer: true))),
                   ),
                   const SizedBox(width: 8),
                   _RoundAction(
@@ -178,8 +183,22 @@ class _PetugasOrderDetailPageState extends State<PetugasOrderDetailPage> {
                       const Text('Foto dari Customer', style: _captionText),
                     if (widget.photoPath != null) ...[
                       const SizedBox(height: 4),
-                      Image.file(File(widget.photoPath!),
-                          height: 110, fit: BoxFit.cover),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => FullscreenPhotoPage(
+                                    photoPath: widget.photoPath!))),
+                        child: Image.file(File(widget.photoPath!),
+                            height: 110, fit: BoxFit.cover),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => FullscreenPhotoPage(
+                                    photoPath: widget.photoPath!))),
+                        icon: const Icon(Icons.fullscreen),
+                        label: const Text('Lihat Foto Penuh'),
+                      ),
                     ],
                     if (widget.latitude != null &&
                         widget.longitude != null) ...[

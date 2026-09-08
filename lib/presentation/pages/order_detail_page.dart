@@ -13,6 +13,7 @@ import '../bloc/order/order_state.dart';
 import '../widgets/error_state_widget.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/status_badge.dart';
+import 'customer_support_pages.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final String orderId;
@@ -94,7 +95,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                 fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
                         _infoRow('Alamat', order.address),
-                        _infoRow('Jenis Sampah', order.wasteType.label),
+                        _infoRow(
+                            'Jenis Sampah',
+                            order.selectedWasteTypes
+                                .map((type) => type.label)
+                                .join(', ')),
                         _infoRow(
                             'Berat', '${order.weightKg.toStringAsFixed(1)} kg'),
                         _infoRow('Kendaraan', order.vehicleType.label),
@@ -112,10 +117,24 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                           const SizedBox(height: 6),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.file(File(order.photoPath!),
-                                height: 140,
-                                width: double.infinity,
-                                fit: BoxFit.cover),
+                            child: GestureDetector(
+                              onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) => FullscreenPhotoPage(
+                                          photoPath: order.photoPath!))),
+                              child: Image.file(File(order.photoPath!),
+                                  height: 140,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover),
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                    builder: (_) => FullscreenPhotoPage(
+                                        photoPath: order.photoPath!))),
+                            icon: const Icon(Icons.fullscreen),
+                            label: const Text('Lihat Foto Penuh'),
                           ),
                         ],
                         if (order.latitude != null &&
@@ -132,44 +151,45 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('METODE PEMBAYARAN',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textSecondary,
-                                fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<PaymentMethod>(
-                          initialValue: _selectedPaymentMethod,
-                          decoration: const InputDecoration(
-                              prefixIcon: Icon(Icons.payments_outlined)),
-                          items: PaymentMethod.values
-                              .map((method) => DropdownMenuItem(
-                                    value: method,
-                                    child: Text(method.label),
-                                  ))
-                              .toList(),
-                          onChanged: (method) =>
-                              setState(() => _selectedPaymentMethod = method),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          (_selectedPaymentMethod ?? order.paymentMethod).isCod
-                              ? 'Tunai atau QRIS ditunjukkan kepada petugas saat pickup.'
-                              : 'Pembayaran dilakukan melalui Virtual Account bank pilihan.',
-                          style: const TextStyle(
-                              fontSize: 11, color: AppColors.textSecondary),
-                        ),
-                      ],
+                if (order.officerName != null &&
+                    order.status != OrderStatus.dibatalkan) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    child: ListTile(
+                      leading: const CircleAvatar(child: Icon(Icons.person)),
+                      title: Text(order.officerName!,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: const Text('Petugas CleanPick'),
+                      trailing: Wrap(spacing: 4, children: [
+                        IconButton(
+                            tooltip: 'Chat petugas',
+                            onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                    builder: (_) => OfficerChatPage(
+                                        officerName: order.officerName!,
+                                        orderId: order.id))),
+                            icon: const Icon(Icons.chat_bubble_outline,
+                                color: AppColors.primary)),
+                        IconButton(
+                            tooltip: 'Telepon petugas',
+                            onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                    builder: (_) => OfficerCallPage(
+                                        officerName: order.officerName!))),
+                            icon: const Icon(Icons.phone_outlined,
+                                color: AppColors.primary)),
+                      ]),
                     ),
                   ),
-                ),
+                ],
+                const SizedBox(height: 12),
+                Card(
+                    child: ListTile(
+                        leading: const Icon(Icons.payments_outlined,
+                            color: AppColors.primary),
+                        title: const Text('Metode Pembayaran',
+                            style: TextStyle(fontSize: 12)),
+                        subtitle: Text(order.paymentMethod.label))),
                 const SizedBox(height: 12),
                 Card(
                   child: Padding(
@@ -221,6 +241,18 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                         'Bayar kepada petugas saat tiba di lokasi. Petugas akan mengonfirmasi pembayaran.',
                         style: TextStyle(color: Colors.orange, fontSize: 11)),
                   ),
+                if (order.status == OrderStatus.selesai) ...[
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => OfficerRatingPage(
+                                officerName:
+                                    order.officerName ?? 'Petugas CleanPick'))),
+                    icon: const Icon(Icons.star_border),
+                    label: const Text('Beri Rating & Keluhan'),
+                  ),
+                ],
               ],
             ),
           );

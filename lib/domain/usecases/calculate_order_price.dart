@@ -45,6 +45,7 @@ class CalculateOrderPrice {
   OrderPriceResult call({
     required double weightKg,
     required WasteType wasteType,
+    List<WasteType>? wasteTypes,
     VehicleType vehicleType = VehicleType.motorRoda3,
     double distanceKm = 0,
   }) {
@@ -57,7 +58,13 @@ class CalculateOrderPrice {
       );
     }
 
-    final weightFee = weightKg * wasteType.ratePerKg;
+    final types =
+        wasteTypes == null || wasteTypes.isEmpty ? [wasteType] : wasteTypes;
+    final averageRate =
+        types.fold<double>(0, (sum, type) => sum + type.ratePerKg) /
+            types.length;
+    final b3Surcharge = types.contains(WasteType.b3) ? 0.25 : 0;
+    final weightFee = weightKg * averageRate * (1 + b3Surcharge);
     final distanceFee = distanceKm * kDistanceFeePerKm;
     final baseFee = vehicleType.baseFee;
     final total = baseFee + weightFee + distanceFee;
