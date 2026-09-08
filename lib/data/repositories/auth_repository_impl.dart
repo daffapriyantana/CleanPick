@@ -19,6 +19,15 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> resetPassword({required String email}) async {
+    try {
+      await dataSource.resetPassword(email: email);
+    } on AuthException catch (e) {
+      throw AuthFailure(e.message);
+    }
+  }
+
+  @override
   Future<UserEntity> loginPetugas(
       {required String id, required String password}) async {
     try {

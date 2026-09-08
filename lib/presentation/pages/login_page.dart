@@ -42,6 +42,10 @@ class _LoginPageState extends State<LoginPage> {
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (_) => const HomePage()),
               );
+            } else if (state is AuthPasswordResetSent) {
+              _showMessage(
+                'Email reset password telah dikirim. Periksa inbox Anda.',
+              );
             } else if (state is AuthFailureState) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -127,8 +131,7 @@ class _LoginPageState extends State<LoginPage> {
                             style: TextStyle(fontSize: 12)),
                         const Spacer(),
                         TextButton(
-                          onPressed: () => _showMessage(
-                              'Fitur lupa password belum tersedia'),
+                          onPressed: isLoading ? null : _resetPassword,
                           child: const Text('Lupa Password?',
                               style: TextStyle(fontSize: 12)),
                         ),
@@ -232,5 +235,15 @@ class _LoginPageState extends State<LoginPage> {
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _resetPassword() {
+    final email = _emailController.text.trim();
+    if (Validators.emailError(email) != null) {
+      _showMessage(Validators.emailError(email)!);
+      return;
+    }
+
+    context.read<AuthCubit>().resetPassword(email: email);
   }
 }

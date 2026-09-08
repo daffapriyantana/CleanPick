@@ -7,6 +7,7 @@ import '../models/user_model.dart';
 
 abstract class AuthLocalDataSource {
   Future<UserModel> login({required String email, required String password});
+  Future<void> resetPassword({required String email});
   Future<UserModel> loginPetugas(
       {required String id, required String password});
   Future<UserModel> register({
@@ -137,6 +138,13 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     final user = _petugas.firstWhere((petugas) => petugas.id == normalizedId);
     await _persistSession(user);
     return user;
+  }
+
+  @override
+  Future<void> resetPassword({required String email}) async {
+    throw const AuthException(
+      'Reset password hanya tersedia untuk akun Firebase',
+    );
   }
 
   @override

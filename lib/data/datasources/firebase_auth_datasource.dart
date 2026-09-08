@@ -102,6 +102,8 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
     required String address,
     required String password,
   }) async {
+    User? createdFirebaseUser;
+
     try {
       final normalizedEmail = email.trim().toLowerCase();
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -115,6 +117,8 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
           'Gagal membuat akun',
         );
       }
+
+      createdFirebaseUser = firebaseUser;
 
       await _firestore.collection('users').doc(firebaseUser.uid).set({
         'name': name.trim(),
@@ -138,8 +142,27 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
     } on AuthException {
       rethrow;
     } catch (_) {
+      if (createdFirebaseUser != null) {
+        try {
+          await createdFirebaseUser.delete();
+        } catch (_) {}
+      }
+
       throw const AuthException(
-        'Terjadi kesalahan saat membuat akun',
+        'Akun berhasil dibuat, tetapi profil pengguna gagal disimpan. Silakan coba lagi.',
+      );
+    }
+  }
+
+  @override
+  Future<void> resetPassword({required String email}) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim().toLowerCase());
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_getAuthErrorMessage(e));
+    } catch (_) {
+      throw const AuthException(
+        'Terjadi kesalahan saat mengirim email reset password',
       );
     }
   }

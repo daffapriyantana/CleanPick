@@ -31,3 +31,18 @@ class LoginPetugasUseCase {
     return repository.loginPetugas(id: id, password: password);
   }
 }
+
+class ResetPasswordUseCase {
+  final AuthRepository repository;
+  const ResetPasswordUseCase(this.repository);
+
+  Future<void> call({required String email}) async {
+    if (email.trim().isEmpty) {
+      throw const ValidationFailure('Email wajib diisi');
+    }
+    if (!Validators.isValidEmail(email)) {
+      throw const ValidationFailure('Format email tidak valid');
+    }
+    return repository.resetPassword(email: email);
+  }
+}

@@ -9,11 +9,13 @@ class AuthCubit extends Cubit<AuthState> {
   final LoginUseCase loginUseCase;
   final LoginPetugasUseCase loginPetugasUseCase;
   final RegisterUseCase registerUseCase;
+  final ResetPasswordUseCase resetPasswordUseCase;
 
   AuthCubit({
     required this.loginUseCase,
     required this.loginPetugasUseCase,
     required this.registerUseCase,
+    required this.resetPasswordUseCase,
   }) : super(const AuthInitial());
 
   Future<void> login({required String email, required String password}) async {
@@ -25,6 +27,18 @@ class AuthCubit extends Cubit<AuthState> {
       emit(AuthFailureState(e.message));
     } catch (e) {
       emit(AuthFailureState('Gagal masuk: $e'));
+    }
+  }
+
+  Future<void> resetPassword({required String email}) async {
+    emit(const AuthLoading());
+    try {
+      await resetPasswordUseCase(email: email);
+      emit(const AuthPasswordResetSent());
+    } on Failure catch (e) {
+      emit(AuthFailureState(e.message));
+    } catch (e) {
+      emit(AuthFailureState('Gagal mengirim reset password: $e'));
     }
   }
 

@@ -92,6 +92,8 @@ class CleanPickApp extends StatelessWidget {
             loginPetugasUseCase:
                 LoginPetugasUseCase(dependencies.authRepository),
             registerUseCase: RegisterUseCase(dependencies.authRepository),
+            resetPasswordUseCase:
+                ResetPasswordUseCase(dependencies.authRepository),
           ),
         ),
         BlocProvider<OrderCubit>(
