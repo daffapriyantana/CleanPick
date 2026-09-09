@@ -216,7 +216,9 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
       if (e.code == GoogleSignInExceptionCode.canceled) {
         throw const AuthException('Login dengan Google dibatalkan');
       }
-      throw const AuthException('Login dengan Google gagal');
+      throw const AuthException(
+        'Login Google gagal. Pastikan provider Google dan SHA Android sudah dikonfigurasi.',
+      );
     } on FirebaseAuthException catch (e) {
       throw AuthException(_getAuthErrorMessage(e));
     } on AuthException {

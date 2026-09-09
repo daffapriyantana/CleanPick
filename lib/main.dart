@@ -67,7 +67,10 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  await GoogleSignIn.instance.initialize();
+  await GoogleSignIn.instance.initialize(
+    serverClientId:
+        '610958959654-5qs735nudpm1v70ucfnl2d6dq0jnd8p3.apps.googleusercontent.com',
+  );
 
   await initializeDateFormatting('id_ID', null);
 
