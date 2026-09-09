@@ -474,8 +474,23 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
       throw AuthException(_getAuthErrorMessage(e));
     } on AuthException {
       rethrow;
+    } on FirebaseException catch (e) {
+      throw AuthException(_getFirestoreAuthErrorMessage(e));
     } catch (_) {
       throw const AuthException('Terjadi kesalahan saat login petugas');
+    }
+  }
+
+  String _getFirestoreAuthErrorMessage(FirebaseException e) {
+    switch (e.code) {
+      case 'permission-denied':
+        return 'Akses data petugas ditolak. Pastikan akun memiliki data officer '
+            'aktif dan role petugas di Firestore.';
+      case 'unavailable':
+      case 'deadline-exceeded':
+        return 'Data petugas tidak dapat dimuat. Periksa koneksi internet.';
+      default:
+        return e.message ?? 'Data petugas tidak dapat dimuat';
     }
   }
 
@@ -497,6 +512,8 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
         return 'Terlalu banyak percobaan. Silakan coba lagi nanti';
       case 'network-request-failed':
         return 'Tidak dapat terhubung ke internet';
+      case 'operation-not-allowed':
+        return 'Login email/password belum diaktifkan di Firebase Authentication';
       default:
         return e.message ?? 'Terjadi kesalahan autentikasi';
     }

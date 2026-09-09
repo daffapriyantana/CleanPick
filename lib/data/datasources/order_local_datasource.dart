@@ -80,11 +80,15 @@ class OrderLocalDataSourceImpl implements OrderLocalDataSource {
       await _persistOrders();
       return;
     }
-    final decoded = jsonDecode(cachedOrders) as List<dynamic>;
-    _orders
-      ..clear()
-      ..addAll(decoded
-          .map((item) => OrderModel.fromJson(item as Map<String, dynamic>)));
+    try {
+      final decoded = jsonDecode(cachedOrders) as List<dynamic>;
+      _orders
+        ..clear()
+        ..addAll(decoded
+            .map((item) => OrderModel.fromJson(item as Map<String, dynamic>)));
+    } catch (_) {
+      await _persistOrders();
+    }
   }
 
   Future<void> _persistOrders() async {

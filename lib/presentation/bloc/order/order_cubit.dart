@@ -123,8 +123,12 @@ class OrderCubit extends Cubit<OrderState> {
       );
       emit(OrderCreated(order));
       AppNotificationStore.instance.add(
-        title: 'Pesanan Diterima',
-        message: 'Pesanan ${order.id} berhasil dibuat dan menunggu petugas.',
+        title: order.syncStatus == 'pending'
+            ? 'Pesanan Disimpan Offline'
+            : 'Pesanan Diterima',
+        message: order.syncStatus == 'pending'
+            ? 'Pesanan ${order.id} disimpan dan akan disinkronkan saat koneksi kembali.'
+            : 'Pesanan ${order.id} berhasil dibuat dan menunggu petugas.',
       );
     } on Failure catch (e) {
       emit(OrderFailure(e.message));
@@ -165,6 +169,7 @@ class OrderCubit extends Cubit<OrderState> {
       );
     } on Failure catch (e) {
       emit(OrderFailure(e.message));
+      await loadOrders();
     }
   }
 

@@ -80,21 +80,24 @@ domain dengan benar.
 
 ## Milestone 4: Offline-First & Local Cache
 
-- Sesi pengguna, akun terdaftar, password lokal, dan status subscription
-  disimpan melalui `FlutterSecureStorage`.
-- Pesanan disimpan sebagai cache JSON di `SharedPreferences`, sehingga tetap
-  dapat dibaca dan ditulis setelah aplikasi dimulai ulang tanpa internet.
-- Mutasi pesanan dicatat dalam antrean sinkronisasi durable. `OfflineSyncService`
-  memantau `connectivity_plus` dan memproses antrean saat koneksi kembali.
-- Boundary sinkronisasi siap dihubungkan ke API/Firebase; repository dan use
-  case tidak perlu berubah ketika remote datasource ditambahkan.
+- Firebase Authentication menangani password dan session autentikasi. Aplikasi
+  tidak menyimpan password secara lokal.
+- Metadata session user, role, dan status subscription disimpan melalui
+  `FlutterSecureStorage`.
+- Pesanan disimpan sebagai cache JSON dan pending queue durable di
+  `SharedPreferences`, sehingga tetap dapat dibaca dan dibuat setelah aplikasi
+  dimulai ulang tanpa internet.
+- `FirebaseOrderSyncService` memantau `connectivity_plus` sebagai pemicu lalu
+  menyinkronkan pending order ke Firestore ketika koneksi kembali. Setiap order
+  mempertahankan ID yang sama agar write idempotent dan tidak membuat duplikasi.
+- `FirebaseAuth.currentUser.uid` digunakan sebagai `customerId`. Firestore
+  Security Rules membatasi akses order berdasarkan UID customer atau role
+  petugas.
 
 ## Catatan
 
 - Struktur ini menggunakan dependency injection manual sederhana di
   `main.dart` (`AppDependencies`) — bisa diganti `get_it`/`injectable` bila
   diinginkan.
-- Karena batasan lingkungan pembuatan project ini, `flutter pub get` dan
-  `flutter test` belum sempat dijalankan langsung di sini; jalankan kedua
-  perintah tersebut di komputer Anda untuk memverifikasi sebelum
-  dikumpulkan/didemokan.
+- Jalankan `flutter pub get`, `flutter analyze`, dan `flutter test` setelah
+  mengambil perubahan untuk memverifikasi konfigurasi lokal dan Firebase.

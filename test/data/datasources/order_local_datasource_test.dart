@@ -55,4 +55,17 @@ void main() {
     );
     expect(await secondSource.readPendingOperationCount(), 1);
   });
+
+  test('OrderLocalDataSource memulihkan fallback saat cache corrupt', () async {
+    SharedPreferences.setMockInitialValues({
+      'cleanpick_orders_cache': '{invalid-json',
+    });
+    final preferences = await SharedPreferences.getInstance();
+    final source = OrderLocalDataSourceImpl(preferences: preferences);
+
+    final orders = await source.getOrders();
+
+    expect(orders, hasLength(2));
+    expect(preferences.getString('cleanpick_orders_cache'), isNot('{invalid-json'));
+  });
 }

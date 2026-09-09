@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 
+import '../../core/services/app_event_store.dart';
 import '../datasources/firebase_order_datasource.dart';
 
 class FirebaseOrderSyncService {
   final FirebaseOrderDataSource _dataSource;
   final Connectivity _connectivity;
   StreamSubscription<List<ConnectivityResult>>? _subscription;
+  bool _isSyncing = false;
 
   FirebaseOrderSyncService({
     required FirebaseOrderDataSource dataSource,
@@ -21,8 +23,22 @@ class FirebaseOrderSyncService {
   }
 
   Future<void> _syncIfOnline(List<ConnectivityResult> results) async {
-    if (results.any((result) => result != ConnectivityResult.none)) {
-      await _dataSource.syncPendingOperations();
+    if (_isSyncing ||
+        !results.any((result) => result != ConnectivityResult.none)) {
+      return;
+    }
+
+    _isSyncing = true;
+    try {
+      final synced = await _dataSource.syncPendingOperations();
+      if (synced > 0) {
+        AppNotificationStore.instance.add(
+          title: 'Pesanan Tersinkronisasi',
+          message: '$synced pesanan berhasil disinkronkan.',
+        );
+      }
+    } finally {
+      _isSyncing = false;
     }
   }
 

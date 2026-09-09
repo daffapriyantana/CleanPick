@@ -17,6 +17,8 @@ class FirebaseOrderDataSource implements OrderLocalDataSource {
   static const _cacheKey = 'cleanpick_firestore_orders_cache';
   static const _queueKey = 'cleanpick_firestore_orders_queue';
 
+  bool _isSyncing = false;
+
   FirebaseOrderDataSource({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
@@ -49,9 +51,11 @@ class FirebaseOrderDataSource implements OrderLocalDataSource {
       return orders;
     } on ServerException {
       rethrow;
-    } on FirebaseException {
-      final cached = await _readCachedOrders();
-      return cached;
+    } on FirebaseException catch (e) {
+      if (_isOfflineError(e)) {
+        return _readCachedOrders();
+      }
+      throw ServerException(e.message ?? 'Gagal memuat pesanan');
     } catch (_) {
       throw const ServerException('Gagal memuat pesanan');
     }
@@ -76,13 +80,14 @@ class FirebaseOrderDataSource implements OrderLocalDataSource {
 
   @override
   Future<OrderModel> createOrder(OrderModel order) async {
+    late final OrderModel orderForStorage;
     try {
       final firebaseUser = _auth.currentUser;
       if (firebaseUser == null) {
         throw const ServerException('Pengguna belum login');
       }
 
-      final orderForStorage = OrderModel.fromEntity(
+      orderForStorage = OrderModel.fromEntity(
         order.copyWith(
           customerId: firebaseUser.uid,
           officerId: null,
@@ -98,12 +103,14 @@ class FirebaseOrderDataSource implements OrderLocalDataSource {
     } on FirebaseException catch (e) {
       if (_isOfflineError(e)) {
         final pending = OrderModel.fromEntity(
-          order.copyWith(syncStatus: 'pending'),
+          orderForStorage.copyWith(syncStatus: 'pending'),
         );
         await _cachePendingOrder(pending);
         return pending;
       }
       throw ServerException(e.message ?? 'Gagal membuat pesanan');
+    } on ServerException {
+      rethrow;
     } catch (_) {
       throw const ServerException('Gagal membuat pesanan');
     }
@@ -203,6 +210,9 @@ class FirebaseOrderDataSource implements OrderLocalDataSource {
     } on ServerException {
       rethrow;
     } on FirebaseException catch (e) {
+      if (!_isOfflineError(e)) {
+        throw ServerException(e.message ?? fallbackMessage);
+      }
       final cached = await _findCachedOrder(orderId);
       if (cached == null) {
         throw ServerException(e.message ?? fallbackMessage);
@@ -330,6 +340,17 @@ class FirebaseOrderDataSource implements OrderLocalDataSource {
   }
 
   Future<int> syncPendingOperations() async {
+    if (_isSyncing) return 0;
+    _isSyncing = true;
+
+    try {
+      return await _syncPendingOperations();
+    } finally {
+      _isSyncing = false;
+    }
+  }
+
+  Future<int> _syncPendingOperations() async {
     final preferences = await _preferences;
     final queue = preferences.getStringList(_queueKey) ?? <String>[];
     var synced = 0;

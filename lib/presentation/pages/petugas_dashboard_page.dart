@@ -45,18 +45,25 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
           children: [
             const ConnectivityBanner(),
             Expanded(
-              child: _selectedIndex == 1
-                  ? PetugasOrdersView(onMessage: _showMessage)
-                  : _selectedIndex == 2
-                      ? const PetugasIncomeView()
-                      : _selectedIndex == 3
-                          ? const PetugasProfilePage()
-                          : Column(children: [
-                              _Header(name: name, id: id),
-                              Expanded(
-                                  child:
-                                      _OfficerHomeContent(officerId: user?.id)),
-                            ]),
+              child: BlocListener<OrderCubit, OrderState>(
+                listener: (context, state) {
+                  if (_selectedIndex == 0 && state is OrderFailure) {
+                    _showMessage(state.message);
+                  }
+                },
+                child: _selectedIndex == 1
+                    ? PetugasOrdersView(onMessage: _showMessage)
+                    : _selectedIndex == 2
+                        ? const PetugasIncomeView()
+                        : _selectedIndex == 3
+                            ? const PetugasProfilePage()
+                            : Column(children: [
+                                _Header(name: name, id: id),
+                                Expanded(
+                                    child: _OfficerHomeContent(
+                                        officerId: user?.id)),
+                              ]),
+              ),
             ),
           ],
         ),
@@ -99,6 +106,7 @@ class _OfficerHomeContent extends StatelessWidget {
             .where((order) => order.status == OrderStatus.menunggu)
             .toList()
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        final hasActiveTask = active.isNotEmpty;
         final completed = orders.where((order) =>
             order.officerId == officerId &&
             order.status == OrderStatus.selesai);
@@ -159,7 +167,10 @@ class _OfficerHomeContent extends StatelessWidget {
                     title: 'Belum ada pesanan masuk',
                     message: 'Pesanan dari customer akan muncul di sini.')
               else
-                ...incoming.map((order) => _DynamicOrderTile(order: order)),
+                ...incoming.map((order) => _DynamicOrderTile(
+                      order: order,
+                      canTake: !hasActiveTask,
+                    )),
             ],
           ),
         );
@@ -204,13 +215,14 @@ class _OfficerEmptyState extends StatelessWidget {
 
 class _DynamicOrderTile extends StatelessWidget {
   final OrderEntity order;
-  const _DynamicOrderTile({required this.order});
+  final bool canTake;
+  const _DynamicOrderTile({required this.order, this.canTake = true});
 
   @override
   Widget build(BuildContext context) {
     final auth = context.read<AuthCubit>().state;
     final officerName = auth is AuthSuccess ? auth.user.name : 'Petugas';
-    final canTake = order.status == OrderStatus.menunggu;
+    final canTakeOrder = order.status == OrderStatus.menunggu && canTake;
     final canComplete = order.status == OrderStatus.diproses;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -236,11 +248,16 @@ class _DynamicOrderTile extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Row(children: [
-            if (canTake)
+            if (order.status == OrderStatus.menunggu)
               Expanded(
                   child: ElevatedButton(
-                      onPressed: () => context.read<OrderCubit>().takeOrder(
-                          orderId: order.id, officerName: officerName),
+                  onPressed: canTakeOrder
+                    ? () => context.read<OrderCubit>().takeOrder(
+                      orderId: order.id, officerName: officerName)
+                    : () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Selesaikan tugas aktif sebelum mengambil order lain.'))),
                       child: const Text('Ambil Pesanan'))),
             if (canComplete)
               Expanded(
