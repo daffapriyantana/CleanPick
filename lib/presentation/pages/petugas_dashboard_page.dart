@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_constants.dart';
+import '../../domain/entities/order_entity.dart';
 import '../bloc/auth/auth_cubit.dart';
 import '../bloc/auth/auth_state.dart';
-import 'petugas_order_detail_page.dart';
+import '../bloc/order/order_cubit.dart';
+import '../bloc/order/order_state.dart';
 import 'petugas_income_page.dart';
 import 'petugas_orders_page.dart';
+import '../widgets/connectivity_banner.dart';
 
 class PetugasDashboardPage extends StatefulWidget {
   const PetugasDashboardPage({super.key});
@@ -17,174 +21,41 @@ class PetugasDashboardPage extends StatefulWidget {
 
 class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
   int _selectedIndex = 0;
-  String? _activeCustomer = 'Siti Rahma';
-  String? _acceptedCustomer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<OrderCubit>().loadOrders();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
     final user = authState is AuthSuccess ? authState.user : null;
-    final name = user?.name ?? 'Ahmad';
-    final id = user?.id ?? 'PTG-001';
+    final name = user?.name ?? 'Petugas';
+    final id = user?.id ?? '-';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
-        child: _selectedIndex == 1
-            ? PetugasOrdersView(onMessage: _showMessage)
-            : _selectedIndex == 2
-                ? const PetugasIncomeView()
-                : Column(
-                    children: [
-                      _Header(name: name, id: id),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const _SectionTitle('Ringkasan Hari Ini'),
-                              const SizedBox(height: 10),
-                              const Row(
-                                children: [
-                                  Expanded(
-                                      child: _StatisticCard(
-                                          label: 'Hari Ini',
-                                          value: '5',
-                                          caption: 'Pesanan')),
-                                  SizedBox(width: 8),
-                                  Expanded(
-                                      child: _StatisticCard(
-                                          label: 'Selesai',
-                                          value: '3',
-                                          caption: 'Penjemputan')),
-                                  SizedBox(width: 8),
-                                  Expanded(
-                                      child: _StatisticCard(
-                                          label: 'Pendapatan',
-                                          value: 'Rp 175rb',
-                                          caption: 'Dari Petugas')),
-                                ],
-                              ),
-                              const SizedBox(height: 22),
-                              const _SectionTitle('Pesanan Aktif'),
-                              const SizedBox(height: 10),
-                              if (_activeCustomer != null)
-                                _ActivePickupCard(
-                                  customerName: _activeCustomer!,
-                                  address: _activeCustomer == 'Siti Rahma'
-                                      ? 'Jl. Kenanga Indah No. 45, Kebayoran Baru'
-                                      : _activeCustomer == 'Budi Santoso'
-                                          ? 'Jl. Pondok Indah Mall, Area Pickup Utara'
-                                          : 'Jl. Melati Indah No. 12, Cilandak',
-                                  onDetail: () => _openOrderDetail(
-                                    customerName: _activeCustomer!,
-                                    address: _activeCustomer == 'Siti Rahma'
-                                        ? 'Jl. Kenanga Indah No. 45, Kebayoran Baru'
-                                        : _activeCustomer == 'Budi Santoso'
-                                            ? 'Jl. Pondok Indah Mall, Area Pickup Utara'
-                                            : 'Jl. Melati Indah No. 12, Cilandak',
-                                    distance: '2.3 km',
-                                    wasteType: 'Plastik',
-                                    vehicleType: 'Pickup Box',
-                                    vehicleFee: 'Rp 35.000',
-                                    distanceFee: 'Rp 10.000',
-                                    total: 'Rp 45.000',
-                                  ),
-                                ),
-                              const SizedBox(height: 22),
-                              const Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  _SectionTitle('Pesanan Masuk'),
-                                  _Pill(
-                                      label: '2 Baru',
-                                      background: Color(0xFFFEE2E2),
-                                      foreground: AppColors.error),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              _IncomingOrderCard(
-                                name: 'Budi Santoso',
-                                time: '5 menit yang lalu',
-                                distance: '2.3 km',
-                                address:
-                                    'Jl. Pondok Indah Mall, Area Pickup Utara',
-                                chips: const [
-                                  (
-                                    'Plastik',
-                                    Color(0xFFDBEAFE),
-                                    Color(0xFF2563EB)
-                                  ),
-                                  (
-                                    'Kertas',
-                                    Color(0xFFFEF3C7),
-                                    Color(0xFFD97706)
-                                  ),
-                                  (
-                                    'Pickup',
-                                    Color(0xFFDCFCE7),
-                                    Color(0xFF15803D)
-                                  )
-                                ],
-                                price: 'Rp 45.000',
-                                accepted: _acceptedCustomer == 'Budi Santoso',
-                                onAccept: () => _acceptOrder('Budi Santoso'),
-                                onReject: () => _showMessage(
-                                    'Pesanan Budi Santoso ditolak'),
-                                onDetail: () => _openOrderDetail(
-                                  customerName: 'Budi Santoso',
-                                  address:
-                                      'Jl. Pondok Indah Mall, Area Pickup Utara',
-                                  distance: '2.3 km',
-                                  wasteType: 'Plastik',
-                                  vehicleType: 'Pickup Box',
-                                  vehicleFee: 'Rp 35.000',
-                                  distanceFee: 'Rp 10.000',
-                                  total: 'Rp 45.000',
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              _IncomingOrderCard(
-                                name: 'Dewi Lestari',
-                                time: '10 menit yang lalu',
-                                distance: '4.1 km',
-                                address: 'Jl. Melati Indah No. 12, Cilandak',
-                                chips: const [
-                                  (
-                                    'Organik',
-                                    Color(0xFFDCFCE7),
-                                    Color(0xFF15803D)
-                                  ),
-                                  (
-                                    'Motor Tiga',
-                                    Color(0xFFF3E8FF),
-                                    Color(0xFF7E22CE)
-                                  )
-                                ],
-                                price: 'Rp 30.000',
-                                accepted: _acceptedCustomer == 'Dewi Lestari',
-                                onAccept: () => _acceptOrder('Dewi Lestari'),
-                                onReject: () => _showMessage(
-                                    'Pesanan Dewi Lestari ditolak'),
-                                onDetail: () => _openOrderDetail(
-                                  customerName: 'Dewi Lestari',
-                                  address: 'Jl. Melati Indah No. 12, Cilandak',
-                                  distance: '4.1 km',
-                                  wasteType: 'Organik',
-                                  vehicleType: 'Motor Tiga',
-                                  vehicleFee: 'Rp 25.000',
-                                  distanceFee: 'Rp 5.000',
-                                  total: 'Rp 30.000',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+        child: Column(
+          children: [
+            const ConnectivityBanner(),
+            Expanded(
+              child: _selectedIndex == 1
+                  ? PetugasOrdersView(onMessage: _showMessage)
+                  : _selectedIndex == 2
+                      ? const PetugasIncomeView()
+                      : Column(children: [
+                          _Header(name: name, id: id),
+                          Expanded(
+                              child: _OfficerHomeContent(officerId: user?.id)),
+                        ]),
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: _BottomNavigation(
         selectedIndex: _selectedIndex,
@@ -202,81 +73,182 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
+}
 
-  void _acceptOrder(String customerName) {
-    if (_activeCustomer != null) {
-      _showActiveOrderDialog();
-      return;
-    }
-    setState(() {
-      _acceptedCustomer = customerName;
-      _activeCustomer = customerName;
-    });
-    _showMessage('Pesanan $customerName diterima');
-  }
+class _OfficerHomeContent extends StatelessWidget {
+  final String? officerId;
+  const _OfficerHomeContent({required this.officerId});
 
-  Future<void> _showActiveOrderDialog() async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Pesanan Aktif'),
-        content: const Text(
-            'Selesaikan atau batalkan pesanan aktif terlebih dahulu sebelum menerima pesanan lain.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<OrderCubit, OrderState>(
+      builder: (context, state) {
+        if (state is OrderLoading || state is OrderInitial) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final orders = state is OrdersLoaded ? state.orders : <OrderEntity>[];
+        final active = orders
+            .where((order) =>
+                order.officerId == officerId &&
+                order.status != OrderStatus.selesai &&
+                order.status != OrderStatus.dibatalkan)
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        final incoming = orders
+            .where((order) => order.status == OrderStatus.menunggu)
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        final completed = orders.where((order) =>
+            order.officerId == officerId &&
+            order.status == OrderStatus.selesai);
+        final income = completed.fold<double>(
+            0, (total, order) => total + order.totalPrice);
+
+        return RefreshIndicator(
+          onRefresh: () => context.read<OrderCubit>().loadOrders(),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            children: [
+              const _SectionTitle('Ringkasan Hari Ini'),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(
+                    child: _StatisticCard(
+                        label: 'Aktif',
+                        value: '${active.length}',
+                        caption: 'Pesanan')),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: _StatisticCard(
+                        label: 'Selesai',
+                        value: '${completed.length}',
+                        caption: 'Penjemputan')),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: _StatisticCard(
+                        label: 'Pendapatan',
+                        value: 'Rp ${income.toStringAsFixed(0)}',
+                        caption: 'Selesai')),
+              ]),
+              const SizedBox(height: 22),
+              const _SectionTitle('Pesanan Aktif'),
+              const SizedBox(height: 10),
+              if (active.isEmpty)
+                const _OfficerEmptyState(
+                    icon: Icons.local_shipping_outlined,
+                    title: 'Belum ada pesanan aktif',
+                    message: 'Pesanan yang Anda ambil akan tampil di sini.')
+              else
+                ...active.map((order) => _DynamicOrderTile(order: order)),
+              const SizedBox(height: 22),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const _SectionTitle('Pesanan Masuk'),
+                  _Pill(
+                      label: '${incoming.length} Baru',
+                      background: const Color(0xFFFEE2E2),
+                      foreground: AppColors.error),
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (incoming.isEmpty)
+                const _OfficerEmptyState(
+                    icon: Icons.inbox_outlined,
+                    title: 'Belum ada pesanan masuk',
+                    message: 'Pesanan dari customer akan muncul di sini.')
+              else
+                ...incoming.map((order) => _DynamicOrderTile(order: order)),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
+}
 
-  void _completeActiveOrder() {
-    final customerName = _activeCustomer;
-    setState(() {
-      _activeCustomer = null;
-      _acceptedCustomer = null;
-    });
-    _showMessage(
-        'Pesanan ${customerName ?? ''} selesai. Anda bisa menerima pesanan baru');
-  }
+class _OfficerEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+  const _OfficerEmptyState({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
 
-  void _cancelActiveOrder() {
-    final customerName = _activeCustomer;
-    setState(() {
-      _activeCustomer = null;
-      _acceptedCustomer = null;
-    });
-    _showMessage(
-        'Pesanan ${customerName ?? ''} dibatalkan. Anda bisa menerima pesanan baru');
-  }
-
-  void _openOrderDetail({
-    required String customerName,
-    required String address,
-    required String distance,
-    required String wasteType,
-    required String vehicleType,
-    required String vehicleFee,
-    required String distanceFee,
-    required String total,
-  }) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PetugasOrderDetailPage(
-          customerName: customerName,
-          address: address,
-          distance: distance,
-          wasteType: wasteType,
-          vehicleType: vehicleType,
-          vehicleFee: vehicleFee,
-          distanceFee: distanceFee,
-          total: total,
-          onCompleted: _completeActiveOrder,
-          onCancelled: _cancelActiveOrder,
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
         ),
+        child: Column(
+          children: [
+            Icon(icon, size: 38, color: AppColors.primary),
+            const SizedBox(height: 10),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12)),
+          ],
+        ),
+      );
+}
+
+class _DynamicOrderTile extends StatelessWidget {
+  final OrderEntity order;
+  const _DynamicOrderTile({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.read<AuthCubit>().state;
+    final officerName = auth is AuthSuccess ? auth.user.name : 'Petugas';
+    final canTake = order.status == OrderStatus.menunggu;
+    final canComplete = order.status == OrderStatus.diproses;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(
+                child: Text(order.customerName ?? 'Customer CleanPick',
+                    style: const TextStyle(fontWeight: FontWeight.bold))),
+            Text(order.status.label,
+                style: TextStyle(
+                    color: order.status.color, fontWeight: FontWeight.bold)),
+          ]),
+          const SizedBox(height: 7),
+          Text(order.address,
+              style: const TextStyle(
+                  color: AppColors.textSecondary, fontSize: 12)),
+          const SizedBox(height: 6),
+          Text('${order.wasteType.label} • ${order.vehicleType.label}'),
+          const SizedBox(height: 6),
+          Text('Rp ${order.totalPrice.toStringAsFixed(0)}',
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Row(children: [
+            if (canTake)
+              Expanded(
+                  child: ElevatedButton(
+                      onPressed: () => context.read<OrderCubit>().takeOrder(
+                          orderId: order.id, officerName: officerName),
+                      child: const Text('Ambil Pesanan'))),
+            if (canComplete)
+              Expanded(
+                  child: ElevatedButton(
+                      onPressed: () =>
+                          context.read<OrderCubit>().complete(order.id),
+                      child: const Text('Tandai Selesai'))),
+          ]),
+        ]),
       ),
     );
   }
@@ -413,6 +385,7 @@ class _Pill extends StatelessWidget {
       );
 }
 
+// ignore: unused_element
 class _ActivePickupCard extends StatelessWidget {
   final String customerName;
   final String address;
@@ -469,6 +442,7 @@ class _ActivePickupCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _IncomingOrderCard extends StatelessWidget {
   final String name;
   final String time;

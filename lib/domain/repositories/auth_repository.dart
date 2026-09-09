@@ -23,4 +23,5 @@ abstract class AuthRepository {
   Future<void> logout();
 
   UserEntity? get currentUser;
+  String? get currentRole;
 }

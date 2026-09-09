@@ -82,4 +82,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   UserEntity? get currentUser => dataSource.currentUser;
+
+  @override
+  String? get currentRole => dataSource.currentRole;
 }

@@ -18,6 +18,7 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
   static const _subscriptionKey = 'cleanpick_subscription_status';
 
   UserModel? _currentUser;
+  String? _currentRole;
 
   FirebaseAuthDataSource({
     FirebaseAuth? auth,
@@ -29,6 +30,9 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
 
   @override
   UserModel? get currentUser => _currentUser;
+
+  @override
+  String? get currentRole => _currentRole;
 
   Future<UserModel> _getUserProfile(String uid) async {
     final document = await _firestore.collection('users').doc(uid).get();
@@ -47,6 +51,8 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
       );
     }
 
+    final role = data['role']?.toString() ?? 'customer';
+    _currentRole = role;
     final user = UserModel(
       id: uid,
       name: data['name']?.toString() ?? '',
@@ -54,7 +60,7 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
       phone: data['phone']?.toString() ?? '',
       address: data['address']?.toString() ?? '',
     );
-    await _persistSession(user, data['role']?.toString() ?? 'customer');
+    await _persistSession(user, role);
     return user;
   }
 
@@ -85,8 +91,11 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
 
     if (firebaseUser == null) {
       _currentUser = null;
+      _currentRole = null;
       return;
     }
+
+    _currentRole = await _storage.read(key: _roleKey);
 
     _currentUser = await _readCachedProfile(firebaseUser.uid) ??
         UserModel(
@@ -122,6 +131,13 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
       }
 
       final user = await _getUserProfile(firebaseUser.uid);
+      if (await _storage.read(key: _roleKey) == 'petugas') {
+        await _auth.signOut();
+        _currentUser = null;
+        throw const AuthException(
+          'Akun ini adalah akun petugas. Gunakan login petugas.',
+        );
+      }
       _currentUser = user;
       await _persistSession(user, 'customer');
       return user;
@@ -261,6 +277,7 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
       );
 
       _currentUser = user;
+      _currentRole = 'petugas';
       await _persistSession(user, 'petugas');
       return user;
     } on FirebaseAuthException catch (e) {
@@ -285,6 +302,7 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
     try {
       await _auth.signOut();
       _currentUser = null;
+      _currentRole = null;
       await _storage.delete(key: _sessionKey);
       await _storage.delete(key: _roleKey);
       await _storage.delete(key: _subscriptionKey);
@@ -312,20 +330,42 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
         throw const AuthException('Gagal mendapatkan data petugas');
       }
 
-      final officerSnapshot = await _firestore
-          .collection('officers')
-          .where('uid', isEqualTo: firebaseUser.uid)
-          .limit(1)
-          .get();
+      final officers = _firestore.collection('officers');
+      DocumentSnapshot<Map<String, dynamic>>? officerDocument;
 
-      if (officerSnapshot.docs.isEmpty) {
+      final documentByUid = await officers.doc(firebaseUser.uid).get();
+      if (documentByUid.exists) {
+        officerDocument = documentByUid;
+      } else {
+        final officerSnapshot = await officers
+            .where('uid', isEqualTo: firebaseUser.uid)
+            .limit(1)
+            .get();
+        if (officerSnapshot.docs.isNotEmpty) {
+          officerDocument = officerSnapshot.docs.first;
+        } else {
+          final legacyOfficerSnapshot = await officers
+              .where('officerid', isEqualTo: firebaseUser.uid)
+              .limit(1)
+              .get();
+          if (legacyOfficerSnapshot.docs.isNotEmpty) {
+            officerDocument = legacyOfficerSnapshot.docs.first;
+          }
+        }
+      }
+
+      if (officerDocument == null) {
         await _auth.signOut();
         throw const AuthException(
           'Akun petugas tidak ditemukan di data officer',
         );
       }
 
-      final officerData = officerSnapshot.docs.first.data();
+      final officerData = officerDocument.data();
+      if (officerData == null) {
+        await _auth.signOut();
+        throw const AuthException('Data petugas kosong');
+      }
       final status = officerData['status']?.toString() ?? 'nonaktif';
       if (status != 'aktif') {
         await _auth.signOut();

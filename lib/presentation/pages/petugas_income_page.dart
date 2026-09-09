@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/order_entity.dart';
+import '../bloc/auth/auth_cubit.dart';
+import '../bloc/auth/auth_state.dart';
 import '../bloc/order/order_cubit.dart';
 import '../bloc/order/order_state.dart';
 
@@ -19,6 +22,12 @@ class _PetugasIncomeViewState extends State<PetugasIncomeView> {
 
   @override
   Widget build(BuildContext context) {
+    final orderState = context.watch<OrderCubit>().state;
+    if (orderState is OrderInitial) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) context.read<OrderCubit>().loadOrders();
+      });
+    }
     return Column(
       children: [
         Container(
@@ -82,9 +91,13 @@ class _DynamicIncomeContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<OrderCubit, OrderState>(
       builder: (context, state) {
+        final auth = context.read<AuthCubit>().state;
+        final officerId = auth is AuthSuccess ? auth.user.id : null;
         final orders = state is OrdersLoaded
             ? state.orders
-                .where((order) => order.status == OrderStatus.selesai)
+                .where((order) =>
+                    order.status == OrderStatus.selesai &&
+                    order.officerId == officerId)
                 .toList()
             : <OrderEntity>[];
         final now = DateTime.now();
@@ -94,6 +107,12 @@ class _DynamicIncomeContent extends StatelessWidget {
         }).toList();
         final total =
             filtered.fold<double>(0, (sum, order) => sum + order.totalPrice);
+        final chart = _buildChart(filtered, isMonthly);
+        final money = NumberFormat.currency(
+          locale: 'id_ID',
+          symbol: 'Rp ',
+          decimalDigits: 0,
+        );
         return Column(
           key: ValueKey(isMonthly),
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,9 +120,9 @@ class _DynamicIncomeContent extends StatelessWidget {
             _IncomeSummaryCard(
               title:
                   isMonthly ? 'Pendapatan Bulan Ini' : 'Pendapatan Minggu Ini',
-              amount: 'Rp ${total.toStringAsFixed(0)}',
-              labels: const [],
-              values: const [],
+              amount: money.format(total),
+              labels: chart.labels,
+              values: chart.values,
             ),
             const SizedBox(height: 10),
             Row(children: [
@@ -116,15 +135,14 @@ class _DynamicIncomeContent extends StatelessWidget {
                   child: _SmallSummaryCard(
                       title: 'Rata-rata',
                       value: filtered.isEmpty
-                          ? 'Rp 0'
-                          : 'Rp ${(total / filtered.length).toStringAsFixed(0)}')),
+                          ? money.format(0)
+                          : money.format(total / filtered.length))),
             ]),
             const SizedBox(height: 22),
             const _SectionHeading('Transaksi Selesai'),
             const SizedBox(height: 10),
             if (filtered.isEmpty)
-              const Text('Belum ada order selesai pada periode ini',
-                  style: TextStyle(color: AppColors.textSecondary))
+              const _IncomeEmptyState()
             else
               ...filtered.map((order) => _TransactionCard(
                     time:
@@ -132,13 +150,73 @@ class _DynamicIncomeContent extends StatelessWidget {
                     name: order.customerName ?? 'Customer CleanPick',
                     detail:
                         '${order.wasteType.label} - ${order.vehicleType.label}',
-                    income: '+Rp ${order.totalPrice.toStringAsFixed(0)}',
+                    income: '+${money.format(order.totalPrice)}',
                   )),
           ],
         );
       },
     );
   }
+
+  _ChartData _buildChart(List<OrderEntity> orders, bool monthly) {
+    final now = DateTime.now();
+    final days = monthly ? 7 : 7;
+    final totals = List<double>.filled(days, 0);
+    for (final order in orders) {
+      final day = DateTime(
+          order.createdAt.year, order.createdAt.month, order.createdAt.day);
+      final today = DateTime(now.year, now.month, now.day);
+      final index = today.difference(day).inDays;
+      if (index >= 0 && index < days) {
+        totals[days - index - 1] += order.totalPrice;
+      }
+    }
+    final maxTotal =
+        totals.fold<double>(0, (max, value) => value > max ? value : max);
+    return _ChartData(
+      labels: List.generate(days, (index) {
+        final date = now.subtract(Duration(days: days - index - 1));
+        return DateFormat('E', 'id_ID').format(date).substring(0, 3);
+      }),
+      values: totals
+          .map((value) =>
+              maxTotal == 0 ? 0.04 : (value / maxTotal).clamp(0.04, 1.0))
+          .toList(),
+    );
+  }
+}
+
+class _ChartData {
+  final List<String> labels;
+  final List<double> values;
+  const _ChartData({required this.labels, required this.values});
+}
+
+class _IncomeEmptyState extends StatelessWidget {
+  const _IncomeEmptyState();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 18),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAF9),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Column(
+          children: [
+            Icon(Icons.bar_chart_rounded, size: 38, color: AppColors.primary),
+            SizedBox(height: 10),
+            Text('Belum ada pendapatan',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 4),
+            Text('Pendapatan akan muncul setelah pesanan selesai.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          ],
+        ),
+      );
 }
 
 class _PeriodButton extends StatelessWidget {

@@ -27,6 +27,7 @@ class OrderEntity extends Equatable {
   final String? officerId;
   final int? officerRating;
   final String? complaint;
+  final String syncStatus;
 
   const OrderEntity({
     required this.id,
@@ -54,6 +55,7 @@ class OrderEntity extends Equatable {
     this.officerId,
     this.officerRating,
     this.complaint,
+    this.syncStatus = 'synced',
   });
 
   List<WasteType> get selectedWasteTypes =>
@@ -73,6 +75,7 @@ class OrderEntity extends Equatable {
     List<WasteType>? wasteTypes,
     int? officerRating,
     String? complaint,
+    String? syncStatus,
   }) {
     return OrderEntity(
       id: id,
@@ -100,6 +103,7 @@ class OrderEntity extends Equatable {
       officerId: officerId ?? this.officerId,
       officerRating: officerRating ?? this.officerRating,
       complaint: complaint ?? this.complaint,
+      syncStatus: syncStatus ?? this.syncStatus,
     );
   }
 
@@ -130,5 +134,6 @@ class OrderEntity extends Equatable {
         officerId,
         officerRating,
         complaint,
+        syncStatus,
       ];
 }

@@ -11,7 +11,7 @@ service cloud.firestore {
                     );
 
       allow read: if request.auth != null
-                   && request.auth.uid == userId;
+                  && request.auth.uid == userId;
 
       allow update: if request.auth != null
                     && request.auth.uid == userId
@@ -22,14 +22,26 @@ service cloud.firestore {
 
     match /officers/{officerId} {
       allow create: if request.auth != null
-                    && request.resource.data.uid == request.auth.uid;
+                    && (
+                      request.resource.data.uid == request.auth.uid
+                      || request.resource.data.officerid == request.auth.uid
+                    );
 
       allow read: if request.auth != null
-                  && resource.data.uid == request.auth.uid;
+                  && (
+                    resource.data.uid == request.auth.uid
+                    || resource.data.officerid == request.auth.uid
+                  );
 
       allow update: if request.auth != null
-                    && resource.data.uid == request.auth.uid
-                    && request.resource.data.uid == request.auth.uid;
+                    && (
+                      resource.data.uid == request.auth.uid
+                      || resource.data.officerid == request.auth.uid
+                    )
+                    && (
+                      request.resource.data.uid == request.auth.uid
+                      || request.resource.data.officerid == request.auth.uid
+                    );
 
       allow delete: if false;
     }
@@ -52,6 +64,12 @@ service cloud.firestore {
                         && request.resource.data.status == resource.data.status
                         && request.resource.data.officerId == resource.data.officerId
                         && request.resource.data.officerName == resource.data.officerName
+                      )
+                      || (
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'petugas'
+                        && resource.data.status == 'menunggu'
+                        && request.resource.data.officerId == request.auth.uid
+                        && request.resource.data.status == 'diproses'
                       )
                       || (
                         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'petugas'

@@ -53,12 +53,21 @@ class _PetugasOrdersViewState extends State<PetugasOrdersView> {
               return Center(child: Text(state.message));
             }
             if (state is! OrdersLoaded) return const SizedBox.shrink();
+            final auth = context.read<AuthCubit>().state;
+            final officerId = auth is AuthSuccess ? auth.user.id : null;
             final orders = state.orders
                 .where((order) => _showCompleted
-                    ? order.status == OrderStatus.selesai
+                    ? order.status == OrderStatus.selesai &&
+                        order.officerId == officerId
                     : order.status != OrderStatus.selesai &&
                         order.status != OrderStatus.dibatalkan)
-                .toList();
+                .toList()
+              ..sort((a, b) {
+                final aMine = a.officerId == officerId;
+                final bMine = b.officerId == officerId;
+                if (aMine != bMine) return aMine ? -1 : 1;
+                return b.createdAt.compareTo(a.createdAt);
+              });
             if (orders.isEmpty) {
               return Center(
                   child: Text(_showCompleted
@@ -91,7 +100,7 @@ class _PetugasOrdersViewState extends State<PetugasOrdersView> {
 
   void _take(OrderEntity order) {
     final auth = context.read<AuthCubit>().state;
-    final name = auth is AuthSuccess ? auth.user.name : 'Ahmad';
+    final name = auth is AuthSuccess ? auth.user.name : 'Petugas';
     context.read<OrderCubit>().takeOrder(orderId: order.id, officerName: name);
   }
 

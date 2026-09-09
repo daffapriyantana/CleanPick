@@ -23,14 +23,14 @@ class AuthCubit extends Cubit<AuthState> {
     required this.repository,
   }) : super(const AuthInitial());
 
-  Future<bool> restoreSession() async {
+  Future<String?> restoreSession() async {
     final user = repository.currentUser;
     if (user == null) {
       emit(const AuthLoggedOut());
-      return false;
+      return null;
     }
     emit(AuthSuccess(user));
-    return true;
+    return repository.currentRole ?? 'customer';
   }
 
   Future<void> login({required String email, required String password}) async {

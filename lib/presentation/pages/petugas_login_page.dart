@@ -17,7 +17,7 @@ class PetugasLoginPage extends StatefulWidget {
 
 class _PetugasLoginPageState extends State<PetugasLoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _idController = TextEditingController(text: 'ahmad@cleanpick.id');
+  final _idController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscure = true;
 
@@ -214,10 +214,6 @@ class _PetugasLoginPageState extends State<PetugasLoginPage> {
                               fontSize: 12, fontWeight: FontWeight.w700)),
                     ),
                     const SizedBox(height: 4),
-                    const Text('Demo: ahmad@cleanpick.id / password123',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontSize: 10, color: AppColors.textSecondary)),
                   ],
                 ),
               ),

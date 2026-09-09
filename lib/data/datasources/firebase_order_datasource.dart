@@ -49,10 +49,9 @@ class FirebaseOrderDataSource implements OrderLocalDataSource {
       return orders;
     } on ServerException {
       rethrow;
-    } on FirebaseException catch (e) {
+    } on FirebaseException {
       final cached = await _readCachedOrders();
-      if (cached.isNotEmpty) return cached;
-      throw ServerException(e.message ?? 'Gagal memuat pesanan');
+      return cached;
     } catch (_) {
       throw const ServerException('Gagal memuat pesanan');
     }
@@ -98,8 +97,11 @@ class FirebaseOrderDataSource implements OrderLocalDataSource {
       return orderForStorage;
     } on FirebaseException catch (e) {
       if (_isOfflineError(e)) {
-        await _cachePendingOrder(order);
-        return order;
+        final pending = OrderModel.fromEntity(
+          order.copyWith(syncStatus: 'pending'),
+        );
+        await _cachePendingOrder(pending);
+        return pending;
       }
       throw ServerException(e.message ?? 'Gagal membuat pesanan');
     } catch (_) {
@@ -206,8 +208,11 @@ class FirebaseOrderDataSource implements OrderLocalDataSource {
         throw ServerException(e.message ?? fallbackMessage);
       }
       final updated = update(cached);
-      await _cachePendingOrder(updated);
-      return updated;
+      final pending = OrderModel.fromEntity(
+        updated.copyWith(syncStatus: 'pending'),
+      );
+      await _cachePendingOrder(pending);
+      return pending;
     } catch (_) {
       throw ServerException(fallbackMessage);
     }
@@ -288,8 +293,13 @@ class FirebaseOrderDataSource implements OrderLocalDataSource {
   }
 
   Future<void> _saveCachedOrders(List<OrderModel> orders) async {
+    final incomingIds = orders.map((order) => order.id).toSet();
+    final existingPending = (await _readCachedOrders()).where(
+      (order) =>
+          order.syncStatus == 'pending' && !incomingIds.contains(order.id),
+    );
     final unique = <String, OrderModel>{
-      for (final order in orders) order.id: order,
+      for (final order in [...existingPending, ...orders]) order.id: order,
     };
     await (await _preferences).setString(
       _cacheKey,
@@ -331,6 +341,14 @@ class FirebaseOrderDataSource implements OrderLocalDataSource {
           Map<String, dynamic>.from(encoded['order'] as Map),
         );
         await _orders.doc(order.id).set(_toFirestore(order));
+        final syncedOrder = OrderModel.fromEntity(
+          order.copyWith(syncStatus: 'synced'),
+        );
+        await _saveCachedOrders([
+          ...(await _readCachedOrders())
+              .where((cached) => cached.id != order.id),
+          syncedOrder,
+        ]);
         synced++;
       } catch (_) {
         remaining.add(item);

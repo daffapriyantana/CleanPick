@@ -13,7 +13,8 @@ class OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final currency =
+        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     final dateFmt = DateFormat('dd MMM yyyy', 'id_ID');
 
     return Card(
@@ -31,27 +32,48 @@ class OrderCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(order.id,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14)),
                   ),
                   StatusBadge(status: order.status),
                 ],
               ),
+              if (order.syncStatus == 'pending') ...[
+                const SizedBox(height: 6),
+                const Row(
+                  children: [
+                    Icon(Icons.cloud_off_outlined,
+                        size: 14, color: Color(0xFFB45309)),
+                    SizedBox(width: 5),
+                    Text('Menunggu koneksi',
+                        style: TextStyle(
+                            color: Color(0xFFB45309),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ],
               const SizedBox(height: 8),
               Text(order.wasteType.label,
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  style: const TextStyle(
+                      color: AppColors.textSecondary, fontSize: 13)),
               const SizedBox(height: 4),
               Text(order.address,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  style: const TextStyle(
+                      color: AppColors.textSecondary, fontSize: 13)),
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(dateFmt.format(order.pickupDate),
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                      style: const TextStyle(
+                          color: AppColors.textSecondary, fontSize: 12)),
                   Text(currency.format(order.totalPrice),
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary)),
                 ],
               ),
             ],

@@ -25,12 +25,14 @@ abstract class AuthLocalDataSource {
   });
   Future<void> logout();
   UserModel? get currentUser;
+  String? get currentRole;
 }
 
 class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   static const _usersKey = 'cleanpick_users';
   static const _passwordsKey = 'cleanpick_passwords';
   static const _sessionKey = 'cleanpick_session';
+  static const _roleKey = 'cleanpick_role';
   static const _subscriptionKey = 'cleanpick_subscription_status';
 
   final FlutterSecureStorage _storage;
@@ -57,6 +59,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   ];
 
   UserModel? _currentUser;
+  String? _currentRole;
   String _subscriptionStatus = 'free';
   late final Future<void> _initialization = _restore();
 
@@ -69,6 +72,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     final usersJson = await _storage.read(key: _usersKey);
     final passwordsJson = await _storage.read(key: _passwordsKey);
     final sessionJson = await _storage.read(key: _sessionKey);
+    _currentRole = await _storage.read(key: _roleKey);
     _subscriptionStatus = await _storage.read(key: _subscriptionKey) ?? 'free';
 
     if (usersJson != null) {
@@ -99,13 +103,18 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     await _storage.write(key: _passwordsKey, value: jsonEncode(_passwords));
   }
 
-  Future<void> _persistSession(UserModel user) async {
+  Future<void> _persistSession(UserModel user, String role) async {
     _currentUser = user;
+    _currentRole = role;
     await _storage.write(key: _sessionKey, value: jsonEncode(user.toJson()));
+    await _storage.write(key: _roleKey, value: role);
   }
 
   @override
   UserModel? get currentUser => _currentUser;
+
+  @override
+  String? get currentRole => _currentRole;
 
   String get subscriptionStatus => _subscriptionStatus;
 
@@ -127,7 +136,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     }
     final user =
         _users.firstWhere((u) => u.email.toLowerCase() == normalizedEmail);
-    await _persistSession(user);
+    await _persistSession(user, 'customer');
     return user;
   }
 
@@ -142,7 +151,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
       throw const AuthException('ID petugas atau password salah');
     }
     final user = _petugas.firstWhere((petugas) => petugas.id == normalizedId);
-    await _persistSession(user);
+    await _persistSession(user, 'petugas');
     return user;
   }
 
@@ -177,7 +186,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     _users.add(newUser);
     _passwords[normalizedEmail] = password;
     await _persistUsers();
-    await _persistSession(newUser);
+    await _persistSession(newUser, 'customer');
     return newUser;
   }
 
@@ -201,7 +210,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     );
     _petugas.add(newOfficer);
     _petugasPasswords[officerId] = password;
-    await _persistSession(newOfficer);
+    await _persistSession(newOfficer, 'petugas');
     return newOfficer;
   }
 
@@ -210,6 +219,8 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     await _initialization;
     await Future.delayed(const Duration(milliseconds: 200));
     _currentUser = null;
+    _currentRole = null;
     await _storage.delete(key: _sessionKey);
+    await _storage.delete(key: _roleKey);
   }
 }

@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -8,7 +6,6 @@ import '../../core/utils/validators.dart';
 import '../bloc/auth/auth_cubit.dart';
 import '../bloc/auth/auth_state.dart';
 import '../widgets/custom_text_field.dart';
-import 'petugas_dashboard_page.dart';
 
 class PetugasRegisterPage extends StatefulWidget {
   const PetugasRegisterPage({super.key});
@@ -38,7 +35,7 @@ class _PetugasRegisterPageState extends State<PetugasRegisterPage> {
     super.dispose();
   }
 
-  Future<void> _registerOfficer() async {
+  void _registerOfficer() {
     if (!_formKey.currentState!.validate()) return;
     if (!_agree) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -50,76 +47,13 @@ class _PetugasRegisterPageState extends State<PetugasRegisterPage> {
       return;
     }
 
-    try {
-      final auth = FirebaseAuth.instance;
-      final firestore = FirebaseFirestore.instance;
-      final email = _emailController.text.trim().toLowerCase();
-      final password = _passwordController.text;
-
-      final credential = await auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      final user = credential.user;
-      if (user == null) {
-        throw Exception('Gagal membuat akun Firebase petugas');
-      }
-
-      final officerId = 'OFF-${(DateTime.now().millisecondsSinceEpoch % 1000000).toString().padLeft(6, '0')}';
-
-      await firestore.collection('officers').doc(officerId).set({
-        'uid': user.uid,
-        'officerId': officerId,
-        'name': _nameController.text.trim(),
-        'email': email,
-        'phone': _phoneController.text.trim(),
-        'status': 'aktif',
-      });
-
-      await firestore.collection('users').doc(user.uid).set({
-        'name': _nameController.text.trim(),
-        'email': email,
-        'phone': _phoneController.text.trim(),
-        'address': '',
-        'role': 'petugas',
-      }, SetOptions(merge: true));
-
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const PetugasDashboardPage()),
-        (route) => false,
-      );
-    } on FirebaseAuthException catch (e) {
-      String message = 'Gagal mendaftar petugas';
-      switch (e.code) {
-        case 'email-already-in-use':
-          message = 'Email sudah digunakan';
-          break;
-        case 'invalid-email':
-          message = 'Format email tidak valid';
-          break;
-        case 'weak-password':
-          message = 'Password terlalu lemah';
-          break;
-        default:
-          message = e.message ?? message;
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: AppColors.error),
+    context.read<AuthCubit>().registerPetugas(
+          name: _nameController.text,
+          email: _emailController.text,
+          phone: _phoneController.text,
+          password: _passwordController.text,
+          confirmPassword: _confirmController.text,
         );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal menyimpan profil petugas: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    }
   }
 
   @override
@@ -132,10 +66,7 @@ class _PetugasRegisterPageState extends State<PetugasRegisterPage> {
       body: BlocConsumer<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthSuccess) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const PetugasDashboardPage()),
-              (route) => false,
-            );
+            Navigator.of(context).pop();
           } else if (state is AuthFailureState) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

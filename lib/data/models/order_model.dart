@@ -28,6 +28,7 @@ class OrderModel extends OrderEntity {
     super.officerId,
     super.officerRating,
     super.complaint,
+    super.syncStatus,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -60,6 +61,7 @@ class OrderModel extends OrderEntity {
       officerId: json['officerId'] as String?,
       officerRating: json['officerRating'] as int?,
       complaint: json['complaint'] as String?,
+      syncStatus: json['syncStatus']?.toString() ?? 'synced',
     );
   }
 
@@ -89,6 +91,7 @@ class OrderModel extends OrderEntity {
         'officerId': officerId,
         'officerRating': officerRating,
         'complaint': complaint,
+        'syncStatus': syncStatus,
       };
 
   factory OrderModel.fromEntity(OrderEntity e) => OrderModel(
@@ -117,5 +120,6 @@ class OrderModel extends OrderEntity {
         officerId: e.officerId,
         officerRating: e.officerRating,
         complaint: e.complaint,
+        syncStatus: e.syncStatus,
       );
 }

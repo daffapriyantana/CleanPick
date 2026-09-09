@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../bloc/auth/auth_cubit.dart';
 import 'home_page.dart';
 import 'login_page.dart';
+import 'petugas_dashboard_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -23,11 +24,15 @@ class _SplashPageState extends State<SplashPage> {
   Future<void> _restoreSession() async {
     await Future<void>.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
-    final restored = await context.read<AuthCubit>().restoreSession();
+    final role = await context.read<AuthCubit>().restoreSession();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => restored ? const HomePage() : const LoginPage(),
+        builder: (_) => role == 'petugas'
+            ? const PetugasDashboardPage()
+            : role == null
+                ? const LoginPage()
+                : const HomePage(),
       ),
     );
   }
