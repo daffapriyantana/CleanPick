@@ -18,12 +18,14 @@ class _FakeAuthRepository implements AuthRepository {
   );
   bool googleShouldFail = false;
   bool emailLoginCalled = false;
+  UserEntity? restoredUser;
+  String? restoredRole;
 
   @override
-  UserEntity? get currentUser => null;
+  UserEntity? get currentUser => restoredUser;
 
   @override
-  String? get currentRole => null;
+  String? get currentRole => restoredRole;
 
   @override
   Future<UserEntity> login(
@@ -113,5 +115,35 @@ void main() {
 
     expect(repository.emailLoginCalled, isTrue);
     expect(cubit.state, isA<AuthSuccess>());
+  });
+
+  test('restoreSession keeps an existing Firebase session authenticated',
+      () async {
+    final repository = _FakeAuthRepository()
+      ..restoredUser = const UserEntity(
+        id: 'restored-uid',
+        name: 'Restored User',
+        email: 'restored@example.com',
+        phone: '',
+        address: '',
+      )
+      ..restoredRole = 'customer';
+    final cubit = _createCubit(repository);
+    addTearDown(cubit.close);
+
+    final role = await cubit.restoreSession();
+
+    expect(role, 'customer');
+    expect(cubit.state, isA<AuthSuccess>());
+  });
+
+  test('restoreSession logs out when no Firebase session exists', () async {
+    final cubit = _createCubit(_FakeAuthRepository());
+    addTearDown(cubit.close);
+
+    final role = await cubit.restoreSession();
+
+    expect(role, isNull);
+    expect(cubit.state, isA<AuthLoggedOut>());
   });
 }

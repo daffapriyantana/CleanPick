@@ -88,7 +88,7 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
   }
 
   Future<void> initialize() async {
-    final firebaseUser = _auth.currentUser;
+    final firebaseUser = await _auth.authStateChanges().first;
 
     if (firebaseUser == null) {
       _currentUser = null;

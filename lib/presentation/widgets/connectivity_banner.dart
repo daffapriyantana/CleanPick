@@ -1,8 +1,29 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 
-class ConnectivityBanner extends StatelessWidget {
+class ConnectivityBanner extends StatefulWidget {
   const ConnectivityBanner({super.key});
+
+  @override
+  State<ConnectivityBanner> createState() => _ConnectivityBannerState();
+}
+
+class _ConnectivityBannerState extends State<ConnectivityBanner> {
+  bool _isOnline = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _readInitialConnection();
+  }
+
+  Future<void> _readInitialConnection() async {
+    final results = await Connectivity().checkConnectivity();
+    if (!mounted) return;
+    setState(() {
+      _isOnline = results.any((result) => result != ConnectivityResult.none);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -10,15 +31,17 @@ class ConnectivityBanner extends StatelessWidget {
       stream: Connectivity().onConnectivityChanged,
       builder: (context, snapshot) {
         final results = snapshot.data;
-        final offline = results != null &&
-            results.every((result) => result == ConnectivityResult.none);
+        final offline = results == null
+            ? !_isOnline
+            : results.every((result) => result == ConnectivityResult.none);
         return Container(
           width: double.infinity,
           color: offline ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5E9),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
           child: Text(
             offline
-                ? 'Offline - perubahan akan disinkronkan saat koneksi kembali.'
+                ? 'Koneksi internet terputus. Sesi tetap dapat digunakan; '
+                    'beberapa fitur membutuhkan koneksi.'
                 : 'Koneksi internet tersambung.',
             style: TextStyle(
               fontSize: 12,

@@ -31,7 +31,6 @@ abstract class AuthLocalDataSource {
 
 class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   static const _usersKey = 'cleanpick_users';
-  static const _passwordsKey = 'cleanpick_passwords';
   static const _sessionKey = 'cleanpick_session';
   static const _roleKey = 'cleanpick_role';
   static const _subscriptionKey = 'cleanpick_subscription_status';
@@ -71,7 +70,6 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   Future<void> _restore() async {
     final usersJson = await _storage.read(key: _usersKey);
-    final passwordsJson = await _storage.read(key: _passwordsKey);
     final sessionJson = await _storage.read(key: _sessionKey);
     _currentRole = await _storage.read(key: _roleKey);
     _subscriptionStatus = await _storage.read(key: _subscriptionKey) ?? 'free';
@@ -84,12 +82,6 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
         ..clear()
         ..addAll(users);
     }
-    if (passwordsJson != null) {
-      _passwords
-        ..clear()
-        ..addAll(Map<String, dynamic>.from(jsonDecode(passwordsJson))
-            .map((key, value) => MapEntry(key, value.toString())));
-    }
     if (sessionJson != null) {
       _currentUser =
           UserModel.fromJson(jsonDecode(sessionJson) as Map<String, dynamic>);
@@ -101,7 +93,6 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
       key: _usersKey,
       value: jsonEncode(_users.map((user) => user.toJson()).toList()),
     );
-    await _storage.write(key: _passwordsKey, value: jsonEncode(_passwords));
   }
 
   Future<void> _persistSession(UserModel user, String role) async {

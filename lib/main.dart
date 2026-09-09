@@ -46,9 +46,9 @@ class AppDependencies {
     final orderDataSource = FirebaseOrderDataSource();
     final orderSyncService =
         FirebaseOrderSyncService(dataSource: orderDataSource);
-    await orderSyncService.start();
     final authDataSource = FirebaseAuthDataSource();
     await authDataSource.initialize();
+    await orderSyncService.start();
 
     final orderRepository = OrderRepositoryImpl(dataSource: orderDataSource);
     final authRepository = AuthRepositoryImpl(dataSource: authDataSource);
