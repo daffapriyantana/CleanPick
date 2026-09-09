@@ -162,7 +162,7 @@ class _LoginPageState extends State<LoginPage> {
                     OutlinedButton.icon(
                       onPressed: isLoading
                           ? null
-                          : () => _showMessage('Login Google belum tersedia'),
+                          : () => context.read<AuthCubit>().signInWithGoogle(),
                       icon: const Icon(Icons.g_mobiledata, size: 22),
                       label: const Text('Masuk dengan Google'),
                     ),

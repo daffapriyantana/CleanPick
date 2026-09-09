@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/error/exceptions.dart';
 import '../models/user_model.dart';
@@ -149,6 +150,81 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
       throw const AuthException(
         'Terjadi kesalahan saat login',
       );
+    }
+  }
+
+  @override
+  Future<UserModel> signInWithGoogle() async {
+    try {
+      final account = await GoogleSignIn.instance.authenticate();
+      final idToken = account.authentication.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw const AuthException('Token Google tidak tersedia');
+      }
+
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
+      final result = await _auth.signInWithCredential(credential);
+      final firebaseUser = result.user;
+      if (firebaseUser == null) {
+        throw const AuthException('Gagal mendapatkan akun Google');
+      }
+
+      final profileReference =
+          _firestore.collection('users').doc(firebaseUser.uid);
+      final profileSnapshot = await profileReference.get();
+      final existingData = profileSnapshot.data();
+      final role = existingData?['role']?.toString() ?? 'customer';
+      if (role == 'petugas') {
+        await _auth.signOut();
+        throw const AuthException(
+          'Akun petugas harus masuk melalui halaman login petugas.',
+        );
+      }
+
+      final name = existingData?['name']?.toString().trim().isNotEmpty == true
+          ? existingData!['name'].toString()
+          : (firebaseUser.displayName ?? account.displayName ?? 'Pengguna');
+      final email = existingData?['email']?.toString() ??
+          firebaseUser.email ??
+          account.email;
+      final phone =
+          existingData?['phone']?.toString() ?? firebaseUser.phoneNumber ?? '';
+      final address = existingData?['address']?.toString() ?? '';
+
+      if (!profileSnapshot.exists) {
+        await profileReference.set({
+          'name': name,
+          'email': email,
+          'phone': phone,
+          'address': address,
+          'role': 'customer',
+        });
+      }
+
+      final user = UserModel(
+        id: firebaseUser.uid,
+        name: name,
+        email: email,
+        phone: phone,
+        address: address,
+      );
+      _currentUser = user;
+      _currentRole = 'customer';
+      await _persistSession(user, 'customer');
+      return user;
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        throw const AuthException('Login dengan Google dibatalkan');
+      }
+      throw const AuthException('Login dengan Google gagal');
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_getAuthErrorMessage(e));
+    } on AuthException {
+      rethrow;
+    } on FirebaseException {
+      throw const AuthException('Profil pengguna tidak dapat dimuat');
+    } catch (_) {
+      throw const AuthException('Periksa koneksi internet Anda');
     }
   }
 

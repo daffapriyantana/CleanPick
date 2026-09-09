@@ -11,6 +11,7 @@ import '../bloc/order/order_state.dart';
 import 'petugas_income_page.dart';
 import 'petugas_orders_page.dart';
 import '../widgets/connectivity_banner.dart';
+import 'petugas_profile_page.dart';
 
 class PetugasDashboardPage extends StatefulWidget {
   const PetugasDashboardPage({super.key});
@@ -48,11 +49,14 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
                   ? PetugasOrdersView(onMessage: _showMessage)
                   : _selectedIndex == 2
                       ? const PetugasIncomeView()
-                      : Column(children: [
-                          _Header(name: name, id: id),
-                          Expanded(
-                              child: _OfficerHomeContent(officerId: user?.id)),
-                        ]),
+                      : _selectedIndex == 3
+                          ? const PetugasProfilePage()
+                          : Column(children: [
+                              _Header(name: name, id: id),
+                              Expanded(
+                                  child:
+                                      _OfficerHomeContent(officerId: user?.id)),
+                            ]),
             ),
           ],
         ),
@@ -61,9 +65,6 @@ class _PetugasDashboardPageState extends State<PetugasDashboardPage> {
         selectedIndex: _selectedIndex,
         onSelected: (index) {
           setState(() => _selectedIndex = index);
-          if (index == 3) {
-            _showMessage('Menu ini segera tersedia');
-          }
         },
       ),
     );
@@ -288,10 +289,8 @@ class _Header extends StatelessWidget {
                         style: const TextStyle(
                             fontSize: 10, color: AppColors.textSecondary)),
                     const SizedBox(width: 8),
-                    const _Pill(
-                        label: '● ONLINE',
-                        background: Color(0xFFDCFCE7),
-                        foreground: Color(0xFF15803D)),
+                    const ConnectionStatusIndicator(
+                        foregroundColor: AppColors.textSecondary),
                   ],
                 ),
               ],

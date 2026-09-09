@@ -31,3 +31,69 @@ class ConnectivityBanner extends StatelessWidget {
     );
   }
 }
+
+class ConnectionStatusIndicator extends StatefulWidget {
+  final Color foregroundColor;
+
+  const ConnectionStatusIndicator({
+    super.key,
+    this.foregroundColor = Colors.white,
+  });
+
+  @override
+  State<ConnectionStatusIndicator> createState() =>
+      _ConnectionStatusIndicatorState();
+}
+
+class _ConnectionStatusIndicatorState extends State<ConnectionStatusIndicator> {
+  bool _isOnline = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _readInitialConnection();
+  }
+
+  Future<void> _readInitialConnection() async {
+    final results = await Connectivity().checkConnectivity();
+    if (!mounted) return;
+    setState(() {
+      _isOnline = results.any((result) => result != ConnectivityResult.none);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<ConnectivityResult>>(
+      stream: Connectivity().onConnectivityChanged,
+      builder: (context, snapshot) {
+        final results = snapshot.data;
+        final online = results == null
+            ? _isOnline
+            : results.any((result) => result != ConnectivityResult.none);
+        final color =
+            online ? const Color(0xFF22C55E) : const Color(0xFFEF4444);
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              online ? 'ONLINE' : 'DISCONNECTED',
+              style: TextStyle(
+                color: online ? widget.foregroundColor : color,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: .2,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}

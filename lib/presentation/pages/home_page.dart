@@ -229,11 +229,19 @@ class _Header extends StatelessWidget {
                         fontSize: 17,
                         fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
-                Text(address,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:
-                        const TextStyle(color: Colors.white70, fontSize: 10)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(address,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 10)),
+                    ),
+                    const SizedBox(width: 10),
+                    const ConnectionStatusIndicator(),
+                  ],
+                ),
               ])),
           Container(
               width: 40,

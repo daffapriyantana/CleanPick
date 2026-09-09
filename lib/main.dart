@@ -4,6 +4,7 @@ import 'firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'core/theme/app_theme.dart';
 import 'data/datasources/firebase_auth_datasource.dart';
@@ -65,6 +66,8 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await GoogleSignIn.instance.initialize();
 
   await initializeDateFormatting('id_ID', null);
 

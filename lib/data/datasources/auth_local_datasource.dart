@@ -7,6 +7,7 @@ import '../models/user_model.dart';
 
 abstract class AuthLocalDataSource {
   Future<UserModel> login({required String email, required String password});
+  Future<UserModel> signInWithGoogle();
   Future<void> resetPassword({required String email});
   Future<UserModel> loginPetugas(
       {required String id, required String password});
@@ -138,6 +139,13 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
         _users.firstWhere((u) => u.email.toLowerCase() == normalizedEmail);
     await _persistSession(user, 'customer');
     return user;
+  }
+
+  @override
+  Future<UserModel> signInWithGoogle() async {
+    throw const AuthException(
+      'Login Google hanya tersedia saat Firebase aktif',
+    );
   }
 
   @override

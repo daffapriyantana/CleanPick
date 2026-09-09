@@ -19,6 +19,15 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<UserEntity> signInWithGoogle() async {
+    try {
+      return await dataSource.signInWithGoogle();
+    } on AuthException catch (e) {
+      throw AuthFailure(e.message);
+    }
+  }
+
+  @override
   Future<void> resetPassword({required String email}) async {
     try {
       await dataSource.resetPassword(email: email);

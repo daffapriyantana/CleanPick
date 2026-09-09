@@ -32,7 +32,8 @@ void main() {
     expect(restored.syncStatus, 'pending');
   });
 
-  test('OrderLocalDataSource menyimpan cache dan queue secara persistent', () async {
+  test('OrderLocalDataSource menyimpan cache dan queue secara persistent',
+      () async {
     SharedPreferences.setMockInitialValues({
       'cleanpick_orders_cache': '[]',
     });
