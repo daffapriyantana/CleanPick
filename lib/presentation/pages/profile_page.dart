@@ -23,15 +23,24 @@ class ProfilePage extends StatelessWidget {
               if (embedded)
                 const Padding(
                   padding: EdgeInsets.only(bottom: 12),
-                  child: Text('Profil', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  child: Text('Profil',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 ),
               Center(
                 child: Column(
                   children: [
-                    const CircleAvatar(radius: 40, backgroundColor: AppColors.primary, child: Icon(Icons.person, color: Colors.white, size: 40)),
+                    const CircleAvatar(
+                        radius: 40,
+                        backgroundColor: AppColors.primary,
+                        child:
+                            Icon(Icons.person, color: Colors.white, size: 40)),
                     const SizedBox(height: 12),
-                    Text(user?.name ?? '-', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-                    Text(user?.email ?? '-', style: const TextStyle(color: AppColors.textSecondary)),
+                    Text(user?.name ?? '-',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 17)),
+                    Text(user?.email ?? '-',
+                        style: const TextStyle(color: AppColors.textSecondary)),
                   ],
                 ),
               ),
@@ -54,15 +63,18 @@ class ProfilePage extends StatelessWidget {
                       title: const Text('Edit Profil'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Fitur edit profil segera hadir')),
+                        const SnackBar(
+                            content: Text('Fitur edit profil segera hadir')),
                       ),
                     ),
                     const Divider(height: 1),
                     ListTile(
                       leading: const Icon(Icons.logout, color: AppColors.error),
-                      title: const Text('Logout', style: TextStyle(color: AppColors.error)),
-                      onTap: () {
-                        context.read<AuthCubit>().logout();
+                      title: const Text('Logout',
+                          style: TextStyle(color: AppColors.error)),
+                      onTap: () async {
+                        await context.read<AuthCubit>().logout();
+                        if (!context.mounted) return;
                         Navigator.of(context).pushAndRemoveUntil(
                           MaterialPageRoute(builder: (_) => const LoginPage()),
                           (route) => false,
@@ -85,8 +97,10 @@ class ProfilePage extends StatelessWidget {
   Widget _tile(IconData icon, String label, String value) {
     return ListTile(
       leading: Icon(icon, color: AppColors.primary),
-      title: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-      subtitle: Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(label,
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+      subtitle:
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
     );
   }
 }

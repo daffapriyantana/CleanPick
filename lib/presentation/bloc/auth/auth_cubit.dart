@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failures.dart';
+import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/usecases/login_usecase.dart';
 import '../../../domain/usecases/register_usecase.dart';
 import 'auth_state.dart';
@@ -9,14 +10,28 @@ class AuthCubit extends Cubit<AuthState> {
   final LoginUseCase loginUseCase;
   final LoginPetugasUseCase loginPetugasUseCase;
   final RegisterUseCase registerUseCase;
+  final RegisterPetugasUseCase registerPetugasUseCase;
   final ResetPasswordUseCase resetPasswordUseCase;
+  final AuthRepository repository;
 
   AuthCubit({
     required this.loginUseCase,
     required this.loginPetugasUseCase,
     required this.registerUseCase,
+    required this.registerPetugasUseCase,
     required this.resetPasswordUseCase,
+    required this.repository,
   }) : super(const AuthInitial());
+
+  Future<bool> restoreSession() async {
+    final user = repository.currentUser;
+    if (user == null) {
+      emit(const AuthLoggedOut());
+      return false;
+    }
+    emit(AuthSuccess(user));
+    return true;
+  }
 
   Future<void> login({required String email, required String password}) async {
     emit(const AuthLoading());
@@ -81,7 +96,35 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  void logout() {
-    emit(const AuthLoggedOut());
+  Future<void> registerPetugas({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    emit(const AuthLoading());
+    try {
+      final user = await registerPetugasUseCase(
+        name: name,
+        email: email,
+        phone: phone,
+        password: password,
+        confirmPassword: confirmPassword,
+      );
+      emit(AuthSuccess(user));
+    } on Failure catch (e) {
+      emit(AuthFailureState(e.message));
+    } catch (e) {
+      emit(AuthFailureState('Gagal mendaftar petugas: $e'));
+    }
+  }
+
+  Future<void> logout() async {
+    try {
+      await repository.logout();
+    } finally {
+      emit(const AuthLoggedOut());
+    }
   }
 }

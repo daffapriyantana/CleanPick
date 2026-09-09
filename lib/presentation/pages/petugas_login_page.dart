@@ -6,6 +6,7 @@ import '../bloc/auth/auth_cubit.dart';
 import '../bloc/auth/auth_state.dart';
 import '../widgets/custom_text_field.dart';
 import 'petugas_dashboard_page.dart';
+import 'petugas_register_page.dart';
 
 class PetugasLoginPage extends StatefulWidget {
   const PetugasLoginPage({super.key});
@@ -16,7 +17,7 @@ class PetugasLoginPage extends StatefulWidget {
 
 class _PetugasLoginPageState extends State<PetugasLoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _idController = TextEditingController(text: 'PTG-001');
+  final _idController = TextEditingController(text: 'ahmad@cleanpick.id');
   final _passwordController = TextEditingController();
   bool _obscure = true;
 
@@ -121,13 +122,13 @@ class _PetugasLoginPageState extends State<PetugasLoginPage> {
                     ),
                     const SizedBox(height: 28),
                     CustomTextField(
-                      label: 'ID Petugas / Nomor HP',
-                      hint: 'contoh: PTG-001',
+                      label: 'Email Petugas',
+                      hint: 'contoh: ahmad@cleanpick.id',
                       controller: _idController,
-                      prefixIcon: const Icon(Icons.person_outline),
+                      prefixIcon: const Icon(Icons.email_outlined),
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                              ? 'ID petugas wajib diisi'
+                              ? 'Email petugas wajib diisi'
                               : null,
                     ),
                     CustomTextField(
@@ -186,6 +187,17 @@ class _PetugasLoginPageState extends State<PetugasLoginPage> {
                             : const Text('Masuk Sekarang'),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const PetugasRegisterPage(),
+                          ),
+                        );
+                      },
+                      child: const Text('Daftar sebagai Petugas'),
+                    ),
                     const SizedBox(height: 36),
                     const Text('Butuh bantuan?',
                         textAlign: TextAlign.center,
@@ -202,7 +214,7 @@ class _PetugasLoginPageState extends State<PetugasLoginPage> {
                               fontSize: 12, fontWeight: FontWeight.w700)),
                     ),
                     const SizedBox(height: 4),
-                    const Text('Demo: PTG-001 / password123',
+                    const Text('Demo: ahmad@cleanpick.id / password123',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             fontSize: 10, color: AppColors.textSecondary)),

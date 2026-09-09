@@ -18,6 +18,7 @@ class OrderEntity extends Equatable {
   final String? note;
   final String? customerId;
   final String? customerName;
+  final String? officerId;
   final String? officerName;
   final String? photoPath;
   final double? latitude;
@@ -41,6 +42,7 @@ class OrderEntity extends Equatable {
     this.note,
     this.customerId,
     this.customerName,
+    this.officerId,
     this.officerName,
     this.photoPath,
     this.latitude,
@@ -51,6 +53,7 @@ class OrderEntity extends Equatable {
   OrderEntity copyWith({
     OrderStatus? status,
     PaymentStatus? paymentStatus,
+    String? officerId,
     String? officerName,
     String? photoPath,
     double? latitude,
@@ -76,6 +79,7 @@ class OrderEntity extends Equatable {
       note: note,
       customerId: customerId ?? this.customerId,
       customerName: customerName ?? this.customerName,
+      officerId: officerId ?? this.officerId,
       officerName: officerName ?? this.officerName,
       photoPath: photoPath ?? this.photoPath,
       latitude: latitude ?? this.latitude,
@@ -102,6 +106,7 @@ class OrderEntity extends Equatable {
         note,
         customerId,
         customerName,
+        officerId,
         officerName,
         photoPath,
         latitude,

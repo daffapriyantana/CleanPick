@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
@@ -35,10 +36,50 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _index, children: _pages),
+      body: Column(
+        children: [
+          const _ConnectivityBanner(),
+          Expanded(child: IndexedStack(index: _index, children: _pages)),
+        ],
+      ),
       bottomNavigationBar: _BottomNav(
           selectedIndex: _index,
           onSelected: (index) => setState(() => _index = index)),
+    );
+  }
+}
+
+class _ConnectivityBanner extends StatelessWidget {
+  const _ConnectivityBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<ConnectivityResult>>(
+      stream: Connectivity().onConnectivityChanged,
+      builder: (context, snapshot) {
+        final results = snapshot.data;
+        if (results == null ||
+            results.any((result) => result != ConnectivityResult.none)) {
+          return Container(
+            width: double.infinity,
+            color: const Color(0xFFE8F5E9),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+            child: const Text(
+              'Koneksi internet tersambung.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF2E7D32)),
+            ),
+          );
+        }
+        return Container(
+          width: double.infinity,
+          color: const Color(0xFFFFEBEE),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          child: const Text(
+            'Koneksi internet terputus. Sesi tetap dapat digunakan.',
+            style: TextStyle(fontSize: 12, color: Color(0xFFC62828)),
+          ),
+        );
+      },
     );
   }
 }

@@ -5,7 +5,10 @@ service cloud.firestore {
     match /users/{userId} {
       allow create: if request.auth != null
                     && request.auth.uid == userId
-                    && request.resource.data.role == 'customer';
+                    && (
+                      request.resource.data.role == 'customer'
+                      || request.resource.data.role == 'petugas'
+                    );
 
       allow read: if request.auth != null
                    && request.auth.uid == userId;
@@ -13,6 +16,50 @@ service cloud.firestore {
       allow update: if request.auth != null
                     && request.auth.uid == userId
                     && request.resource.data.role == resource.data.role;
+
+      allow delete: if false;
+    }
+
+    match /officers/{officerId} {
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+
+      allow read: if request.auth != null
+                  && resource.data.uid == request.auth.uid;
+
+      allow update: if request.auth != null
+                    && resource.data.uid == request.auth.uid
+                    && request.resource.data.uid == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    match /orders/{orderId} {
+      allow create: if request.auth != null
+                    && request.resource.data.customerId == request.auth.uid;
+
+      allow read: if request.auth != null
+                  && (
+                    resource.data.customerId == request.auth.uid
+                    || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'petugas'
+                  );
+
+      allow update: if request.auth != null
+                    && (
+                      (
+                        resource.data.customerId == request.auth.uid
+                        && request.resource.data.customerId == resource.data.customerId
+                        && request.resource.data.status == resource.data.status
+                        && request.resource.data.officerId == resource.data.officerId
+                        && request.resource.data.officerName == resource.data.officerName
+                      )
+                      || (
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'petugas'
+                        && resource.data.officerId == request.auth.uid
+                        && request.resource.data.officerId == request.auth.uid
+                        && request.resource.data.status == 'selesai'
+                      )
+                    );
 
       allow delete: if false;
     }
