@@ -4,14 +4,13 @@ import 'firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/theme/app_theme.dart';
 import 'data/datasources/firebase_auth_datasource.dart';
-import 'data/datasources/order_local_datasource.dart';
+import 'data/datasources/firebase_order_datasource.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'data/repositories/order_repository_impl.dart';
-import 'data/services/offline_sync_service.dart';
+import 'data/services/firebase_order_sync_service.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/order_repository.dart';
 import 'domain/usecases/cancel_order.dart';
@@ -35,22 +34,20 @@ import 'presentation/pages/splash_page.dart';
 class AppDependencies {
   final OrderRepository orderRepository;
   final AuthRepository authRepository;
-  final OfflineSyncService offlineSyncService;
+  final FirebaseOrderSyncService orderSyncService;
 
   AppDependencies._(
       {required this.orderRepository,
       required this.authRepository,
-      required this.offlineSyncService});
+      required this.orderSyncService});
 
   static Future<AppDependencies> build() async {
-    final preferences = await SharedPreferences.getInstance();
-    final orderDataSource = OrderLocalDataSourceImpl(preferences: preferences);
+    final orderDataSource = FirebaseOrderDataSource();
+    final orderSyncService =
+        FirebaseOrderSyncService(dataSource: orderDataSource);
+    await orderSyncService.start();
     final authDataSource = FirebaseAuthDataSource();
     await authDataSource.initialize();
-
-    final offlineSyncService =
-        OfflineSyncService(orderDataSource: orderDataSource);
-    await offlineSyncService.start();
 
     final orderRepository = OrderRepositoryImpl(dataSource: orderDataSource);
     final authRepository = AuthRepositoryImpl(dataSource: authDataSource);
@@ -58,7 +55,7 @@ class AppDependencies {
     return AppDependencies._(
         orderRepository: orderRepository,
         authRepository: authRepository,
-        offlineSyncService: offlineSyncService);
+        orderSyncService: orderSyncService);
   }
 }
 
@@ -92,8 +89,11 @@ class CleanPickApp extends StatelessWidget {
             loginPetugasUseCase:
                 LoginPetugasUseCase(dependencies.authRepository),
             registerUseCase: RegisterUseCase(dependencies.authRepository),
+            registerPetugasUseCase:
+                RegisterPetugasUseCase(dependencies.authRepository),
             resetPasswordUseCase:
                 ResetPasswordUseCase(dependencies.authRepository),
+            repository: dependencies.authRepository,
           ),
         ),
         BlocProvider<OrderCubit>(

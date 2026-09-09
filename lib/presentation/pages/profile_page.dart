@@ -131,8 +131,9 @@ class ProfilePage extends StatelessWidget {
                       leading: const Icon(Icons.logout, color: AppColors.error),
                       title: const Text('Logout',
                           style: TextStyle(color: AppColors.error)),
-                      onTap: () {
-                        context.read<AuthCubit>().logout();
+                      onTap: () async {
+                        await context.read<AuthCubit>().logout();
+                        if (!context.mounted) return;
                         Navigator.of(context).pushAndRemoveUntil(
                           MaterialPageRoute(builder: (_) => const LoginPage()),
                           (route) => false,

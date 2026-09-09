@@ -24,6 +24,7 @@ class OrderEntity extends Equatable {
   final List<WasteType> wasteTypes;
   final String? customerId;
   final String? customerName;
+  final String? officerId;
   final int? officerRating;
   final String? complaint;
 
@@ -50,6 +51,7 @@ class OrderEntity extends Equatable {
     this.wasteTypes = const [],
     this.customerId,
     this.customerName,
+    this.officerId,
     this.officerRating,
     this.complaint,
   });
@@ -60,6 +62,9 @@ class OrderEntity extends Equatable {
   OrderEntity copyWith({
     OrderStatus? status,
     PaymentStatus? paymentStatus,
+    String? customerId,
+    String? customerName,
+    String? officerId,
     String? officerName,
     String? photoPath,
     double? latitude,
@@ -90,8 +95,9 @@ class OrderEntity extends Equatable {
       longitude: longitude ?? this.longitude,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       wasteTypes: wasteTypes ?? this.wasteTypes,
-      customerId: customerId,
-      customerName: customerName,
+      customerId: customerId ?? this.customerId,
+      customerName: customerName ?? this.customerName,
+      officerId: officerId ?? this.officerId,
       officerRating: officerRating ?? this.officerRating,
       complaint: complaint ?? this.complaint,
     );
@@ -121,6 +127,7 @@ class OrderEntity extends Equatable {
         wasteTypes,
         customerId,
         customerName,
+        officerId,
         officerRating,
         complaint,
       ];

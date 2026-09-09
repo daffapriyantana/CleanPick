@@ -13,6 +13,12 @@ abstract class AuthRepository {
     required String address,
     required String password,
   });
+  Future<UserEntity> registerPetugas({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+  });
 
   Future<void> logout();
 

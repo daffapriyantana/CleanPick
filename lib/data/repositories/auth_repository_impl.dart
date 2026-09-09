@@ -59,6 +59,25 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<UserEntity> registerPetugas({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+  }) async {
+    try {
+      return await dataSource.registerPetugas(
+        name: name,
+        email: email,
+        phone: phone,
+        password: password,
+      );
+    } on AuthException catch (e) {
+      throw AuthFailure(e.message);
+    }
+  }
+
+  @override
   Future<void> logout() => dataSource.logout();
 
   @override

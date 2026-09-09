@@ -17,6 +17,12 @@ abstract class AuthLocalDataSource {
     required String address,
     required String password,
   });
+  Future<UserModel> registerPetugas({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+  });
   Future<void> logout();
   UserModel? get currentUser;
 }
@@ -173,6 +179,30 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     await _persistUsers();
     await _persistSession(newUser);
     return newUser;
+  }
+
+  @override
+  Future<UserModel> registerPetugas({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+  }) async {
+    await _initialization;
+    await Future.delayed(const Duration(milliseconds: 900));
+    final normalizedEmail = email.trim().toLowerCase();
+    final officerId = 'PTG-${_petugas.length + 1}'.padLeft(3, '0');
+    final newOfficer = UserModel(
+      id: officerId,
+      name: name.trim(),
+      email: normalizedEmail,
+      phone: phone.trim(),
+      address: '',
+    );
+    _petugas.add(newOfficer);
+    _petugasPasswords[officerId] = password;
+    await _persistSession(newOfficer);
+    return newOfficer;
   }
 
   @override

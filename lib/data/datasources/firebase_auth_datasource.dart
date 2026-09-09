@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../core/error/exceptions.dart';
 import '../models/user_model.dart';
@@ -8,14 +11,21 @@ import 'auth_local_datasource.dart';
 class FirebaseAuthDataSource implements AuthLocalDataSource {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
+  final FlutterSecureStorage _storage;
+
+  static const _sessionKey = 'cleanpick_firebase_session';
+  static const _roleKey = 'cleanpick_firebase_role';
+  static const _subscriptionKey = 'cleanpick_subscription_status';
 
   UserModel? _currentUser;
 
   FirebaseAuthDataSource({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
+    FlutterSecureStorage? storage,
   })  : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+        _firestore = firestore ?? FirebaseFirestore.instance,
+        _storage = storage ?? const FlutterSecureStorage();
 
   @override
   UserModel? get currentUser => _currentUser;
@@ -37,13 +47,37 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
       );
     }
 
-    return UserModel(
+    final user = UserModel(
       id: uid,
       name: data['name']?.toString() ?? '',
       email: data['email']?.toString() ?? '',
       phone: data['phone']?.toString() ?? '',
       address: data['address']?.toString() ?? '',
     );
+    await _persistSession(user, data['role']?.toString() ?? 'customer');
+    return user;
+  }
+
+  Future<void> _persistSession(UserModel user, String role) async {
+    await _storage.write(key: _sessionKey, value: jsonEncode(user.toJson()));
+    await _storage.write(key: _roleKey, value: role);
+    await _storage.write(
+      key: _subscriptionKey,
+      value: await _storage.read(key: _subscriptionKey) ?? 'free',
+    );
+  }
+
+  Future<UserModel?> _readCachedProfile(String uid) async {
+    final encoded = await _storage.read(key: _sessionKey);
+    if (encoded == null) return null;
+    try {
+      final profile = UserModel.fromJson(
+        jsonDecode(encoded) as Map<String, dynamic>,
+      );
+      return profile.id == uid ? profile : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> initialize() async {
@@ -54,11 +88,18 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
       return;
     }
 
+    _currentUser = await _readCachedProfile(firebaseUser.uid) ??
+        UserModel(
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName ?? '',
+          email: firebaseUser.email ?? '',
+          phone: '',
+          address: '',
+        );
+
     try {
       _currentUser = await _getUserProfile(firebaseUser.uid);
-    } catch (_) {
-      _currentUser = null;
-    }
+    } catch (_) {}
   }
 
   @override
@@ -82,6 +123,7 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
 
       final user = await _getUserProfile(firebaseUser.uid);
       _currentUser = user;
+      await _persistSession(user, 'customer');
       return user;
     } on FirebaseAuthException catch (e) {
       throw AuthException(_getAuthErrorMessage(e));
@@ -136,6 +178,7 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
         address: address.trim(),
       );
       _currentUser = user;
+      await _persistSession(user, 'customer');
       return user;
     } on FirebaseAuthException catch (e) {
       throw AuthException(_getAuthErrorMessage(e));
@@ -168,10 +211,83 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
   }
 
   @override
+  Future<UserModel> registerPetugas({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+  }) async {
+    User? createdFirebaseUser;
+
+    try {
+      final normalizedEmail = email.trim().toLowerCase();
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: normalizedEmail,
+        password: password,
+      );
+      final firebaseUser = credential.user;
+
+      if (firebaseUser == null) {
+        throw const AuthException('Gagal membuat akun petugas');
+      }
+
+      createdFirebaseUser = firebaseUser;
+
+      final officerName = name.trim();
+
+      await _firestore.collection('officers').doc(firebaseUser.uid).set({
+        'uid': firebaseUser.uid,
+        'officerId': firebaseUser.uid,
+        'name': officerName,
+        'email': normalizedEmail,
+        'phone': phone.trim(),
+        'status': 'aktif',
+      });
+
+      await _firestore.collection('users').doc(firebaseUser.uid).set({
+        'name': officerName,
+        'email': normalizedEmail,
+        'phone': phone.trim(),
+        'address': '',
+        'role': 'petugas',
+      }, SetOptions(merge: true));
+
+      final user = UserModel(
+        id: firebaseUser.uid,
+        name: officerName,
+        email: normalizedEmail,
+        phone: phone.trim(),
+        address: '',
+      );
+
+      _currentUser = user;
+      await _persistSession(user, 'petugas');
+      return user;
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_getAuthErrorMessage(e));
+    } on AuthException {
+      rethrow;
+    } catch (_) {
+      if (createdFirebaseUser != null) {
+        try {
+          await createdFirebaseUser.delete();
+        } catch (_) {}
+      }
+
+      throw const AuthException(
+        'Akun petugas berhasil dibuat, tetapi profil gagal disimpan. Silakan coba lagi.',
+      );
+    }
+  }
+
+  @override
   Future<void> logout() async {
     try {
       await _auth.signOut();
       _currentUser = null;
+      await _storage.delete(key: _sessionKey);
+      await _storage.delete(key: _roleKey);
+      await _storage.delete(key: _subscriptionKey);
     } catch (_) {
       throw const AuthException(
         'Gagal melakukan logout',
@@ -184,9 +300,65 @@ class FirebaseAuthDataSource implements AuthLocalDataSource {
     required String id,
     required String password,
   }) async {
-    throw const AuthException(
-      'Login petugas belum dimigrasikan ke Firebase',
-    );
+    try {
+      final normalizedEmail = id.trim().toLowerCase();
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: normalizedEmail,
+        password: password,
+      );
+      final firebaseUser = credential.user;
+
+      if (firebaseUser == null) {
+        throw const AuthException('Gagal mendapatkan data petugas');
+      }
+
+      final officerSnapshot = await _firestore
+          .collection('officers')
+          .where('uid', isEqualTo: firebaseUser.uid)
+          .limit(1)
+          .get();
+
+      if (officerSnapshot.docs.isEmpty) {
+        await _auth.signOut();
+        throw const AuthException(
+          'Akun petugas tidak ditemukan di data officer',
+        );
+      }
+
+      final officerData = officerSnapshot.docs.first.data();
+      final status = officerData['status']?.toString() ?? 'nonaktif';
+      if (status != 'aktif') {
+        await _auth.signOut();
+        throw const AuthException('Akun petugas tidak aktif');
+      }
+
+      await _firestore.collection('users').doc(firebaseUser.uid).set({
+        'name':
+            officerData['name']?.toString() ?? firebaseUser.displayName ?? '',
+        'email': officerData['email']?.toString() ?? firebaseUser.email ?? '',
+        'phone': officerData['phone']?.toString() ?? '',
+        'address': '',
+        'role': 'petugas',
+      }, SetOptions(merge: true));
+
+      final user = UserModel(
+        id: firebaseUser.uid,
+        name: officerData['name']?.toString() ?? firebaseUser.displayName ?? '',
+        email: officerData['email']?.toString() ?? firebaseUser.email ?? '',
+        phone: officerData['phone']?.toString() ?? '',
+        address: '',
+      );
+
+      _currentUser = user;
+      await _persistSession(user, 'petugas');
+      return user;
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_getAuthErrorMessage(e));
+    } on AuthException {
+      rethrow;
+    } catch (_) {
+      throw const AuthException('Terjadi kesalahan saat login petugas');
+    }
   }
 
   String _getAuthErrorMessage(FirebaseAuthException e) {

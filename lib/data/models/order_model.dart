@@ -25,6 +25,7 @@ class OrderModel extends OrderEntity {
     super.wasteTypes,
     super.customerId,
     super.customerName,
+    super.officerId,
     super.officerRating,
     super.complaint,
   });
@@ -56,6 +57,7 @@ class OrderModel extends OrderEntity {
           const [],
       customerId: json['customerId'] as String?,
       customerName: json['customerName'] as String?,
+      officerId: json['officerId'] as String?,
       officerRating: json['officerRating'] as int?,
       complaint: json['complaint'] as String?,
     );
@@ -84,6 +86,7 @@ class OrderModel extends OrderEntity {
         'wasteTypes': wasteTypes.map((type) => type.index).toList(),
         'customerId': customerId,
         'customerName': customerName,
+        'officerId': officerId,
         'officerRating': officerRating,
         'complaint': complaint,
       };
@@ -111,6 +114,7 @@ class OrderModel extends OrderEntity {
         wasteTypes: e.wasteTypes,
         customerId: e.customerId,
         customerName: e.customerName,
+        officerId: e.officerId,
         officerRating: e.officerRating,
         complaint: e.complaint,
       );
