@@ -190,8 +190,9 @@ class OrderCubit extends Cubit<OrderState> {
   Future<void> pay(String orderId) async {
     emit(const OrderLoading());
     try {
-      final order = await payOrder(orderId);
-      emit(OrderPaid(order));
+      final checkout = await payOrder(orderId);
+      final order = await getOrderDetail(orderId);
+      emit(PaymentCheckoutReady(order, checkout));
     } on Failure catch (e) {
       emit(OrderFailure(e.message));
     } catch (e) {

@@ -11,12 +11,15 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'core/theme/app_theme.dart';
 import 'data/datasources/firebase_auth_datasource.dart';
 import 'data/datasources/firebase_order_datasource.dart';
+import 'data/datasources/payment_datasource.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'data/repositories/order_repository_impl.dart';
+import 'data/repositories/payment_repository_impl.dart';
 import 'data/services/firebase_order_sync_service.dart';
 import 'core/services/notification_service.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/order_repository.dart';
+import 'domain/repositories/payment_repository.dart';
 import 'domain/usecases/cancel_order.dart';
 import 'domain/usecases/create_order.dart';
 import 'domain/usecases/complete_order.dart';
@@ -40,12 +43,14 @@ import 'presentation/pages/petugas_dashboard_page.dart';
 /// use case -> cubit.
 class AppDependencies {
   final OrderRepository orderRepository;
+  final PaymentRepository paymentRepository;
   final AuthRepository authRepository;
   final FirebaseOrderSyncService orderSyncService;
   final NotificationService notificationService;
 
   AppDependencies._({
     required this.orderRepository,
+    required this.paymentRepository,
     required this.authRepository,
     required this.orderSyncService,
     required this.notificationService,
@@ -65,10 +70,14 @@ class AppDependencies {
     await orderSyncService.start();
 
     final orderRepository = OrderRepositoryImpl(dataSource: orderDataSource);
+    final paymentRepository = PaymentRepositoryImpl(
+      dataSource: SupabasePaymentDataSource(),
+    );
     final authRepository = AuthRepositoryImpl(dataSource: authDataSource);
 
     return AppDependencies._(
       orderRepository: orderRepository,
+      paymentRepository: paymentRepository,
       authRepository: authRepository,
       orderSyncService: orderSyncService,
       notificationService: notificationService,
@@ -174,7 +183,7 @@ class _CleanPickAppState extends State<CleanPickApp> {
             createOrder: CreateOrder(widget.dependencies.orderRepository),
             assignOrder: AssignOrder(widget.dependencies.orderRepository),
             cancelOrder: CancelOrder(widget.dependencies.orderRepository),
-            payOrder: PayOrder(widget.dependencies.orderRepository),
+            payOrder: PayOrder(widget.dependencies.paymentRepository),
             completeOrder: CompleteOrder(widget.dependencies.orderRepository),
           ),
         ),

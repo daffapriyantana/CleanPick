@@ -80,15 +80,20 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
         listener: (context, state) {
           if (state is OrderCreated) {
             final orderId = state.order.id;
-            Navigator.of(context)
-                .push(MaterialPageRoute(
-                    builder: (_) => const FindingOfficerPage()))
-                .then((_) {
-              if (context.mounted) {
-                Navigator.of(context).pushReplacement(MaterialPageRoute(
-                    builder: (_) => OrderDetailPage(orderId: orderId)));
-              }
-            });
+            if (_paymentMethod.requiresOnlinePayment) {
+              Navigator.of(context).pushReplacement(MaterialPageRoute(
+                  builder: (_) => OrderDetailPage(orderId: orderId)));
+            } else {
+              Navigator.of(context)
+                  .push(MaterialPageRoute(
+                      builder: (_) => const FindingOfficerPage()))
+                  .then((_) {
+                if (context.mounted) {
+                  Navigator.of(context).pushReplacement(MaterialPageRoute(
+                      builder: (_) => OrderDetailPage(orderId: orderId)));
+                }
+              });
+            }
           } else if (state is OrderFailure) {
             setState(() => _submitting = false);
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -173,11 +178,34 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _submitting ? null : _confirmOrder,
-                child: _submitting
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Pesan Sekarang'),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F7EF),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: .18),
+                  ),
+                ),
+                padding: const EdgeInsets.all(10),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _submitting ? null : _confirmOrder,
+                    icon: _submitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.arrow_forward_rounded),
+                    label: Text(
+                      _submitting ? 'Memproses pesanan...' : 'Pesan Sekarang',
+                    ),
+                  ),
+                ),
               ),
               TextButton(
                   onPressed: () => Navigator.of(context).pop(),

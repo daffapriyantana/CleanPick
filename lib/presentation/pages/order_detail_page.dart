@@ -14,6 +14,7 @@ import '../widgets/error_state_widget.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/status_badge.dart';
 import 'customer_support_pages.dart';
+import 'finding_officer_page.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final String orderId;
@@ -23,12 +24,29 @@ class OrderDetailPage extends StatefulWidget {
   State<OrderDetailPage> createState() => _OrderDetailPageState();
 }
 
-class _OrderDetailPageState extends State<OrderDetailPage> {
+class _OrderDetailPageState extends State<OrderDetailPage>
+    with WidgetsBindingObserver {
   PaymentMethod? _selectedPaymentMethod;
+  bool _checkoutOpened = false;
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     context.read<OrderCubit>().loadOrderDetail(widget.orderId);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _checkoutOpened && mounted) {
+      _checkoutOpened = false;
+      context.read<OrderCubit>().loadOrderDetail(widget.orderId);
+    }
   }
 
   @override
@@ -45,6 +63,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Pesanan berhasil dibatalkan')),
             );
+          } else if (state is PaymentCheckoutReady) {
+            _openCheckout(state.checkout.redirectUrl);
           }
         },
         builder: (context, state) {
@@ -63,7 +83,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   ? state.order
                   : state is OrderPaid
                       ? state.order
-                      : null;
+                      : state is PaymentCheckoutReady
+                          ? state.order
+                          : null;
           if (order == null) return const SizedBox.shrink();
           _selectedPaymentMethod ??= order.paymentMethod;
 
@@ -229,18 +251,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                         context.read<OrderCubit>().cancel(order.id),
                     child: const Text('Batalkan Pesanan'),
                   ),
-                if (order.paymentMethod.isCod)
-                  _infoRow('Pembayaran COD', order.paymentMethod.label),
-                if (!order.paymentMethod.isCod)
-                  _infoRow('Kode Virtual Account', _virtualAccount(order)),
-                if (order.paymentMethod.isCod &&
-                    order.paymentStatus == PaymentStatus.belumBayar)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text(
-                        'Bayar kepada petugas saat tiba di lokasi. Petugas akan mengonfirmasi pembayaran.',
-                        style: TextStyle(color: Colors.orange, fontSize: 11)),
-                  ),
+                _buildPaymentAction(order),
                 if (order.status == OrderStatus.selesai) ...[
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
@@ -272,9 +283,127 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     }
   }
 
+  Future<void> _openCheckout(String redirectUrl) async {
+    _checkoutOpened = true;
+    final opened = await launchUrl(
+      Uri.parse(redirectUrl),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      _checkoutOpened = false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Halaman pembayaran tidak tersedia')),
+      );
+    }
+  }
+
   String _virtualAccount(OrderEntity order) {
     final bank = order.paymentMethod.label.replaceFirst('Virtual Account ', '');
     return '8808 1200 ${order.id.hashCode.abs() % 1000000} ($bank)';
+  }
+
+  Widget _buildPaymentAction(OrderEntity order) {
+    final isOnline = order.paymentMethod.requiresOnlinePayment;
+    final isPaid = order.paymentStatus == PaymentStatus.lunas;
+    final statusColor = isPaid ? AppColors.primary : Colors.orange.shade800;
+
+    return Card(
+      margin: const EdgeInsets.only(top: 12),
+      color: isPaid ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isPaid ? Icons.verified_outlined : Icons.payments_outlined,
+                  color: statusColor,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isPaid ? 'Pembayaran berhasil' : 'Pembayaran pesanan',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isOnline
+                            ? order.paymentMethod.label
+                            : 'Bayar kepada petugas saat tiba di lokasi',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  order.paymentStatus.label,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            if (isOnline && !isPaid) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Total ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(order.totalPrice)}',
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (order.paymentMethod != PaymentMethod.codQris) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Kode Virtual Account: ${_virtualAccount(order)}',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => context.read<OrderCubit>().pay(order.id),
+                  icon: const Icon(Icons.lock_outline),
+                  label: const Text('Bayar dengan Midtrans'),
+                ),
+              ),
+            ],
+            if (isOnline && isPaid) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const FindingOfficerPage(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.search),
+                  label: const Text('Cari Petugas'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _infoRow(String label, String value, {bool bold = false}) {

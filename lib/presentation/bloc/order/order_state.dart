@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../../domain/entities/order_entity.dart';
+import '../../../domain/entities/payment_checkout.dart';
 import '../../../domain/usecases/calculate_order_price.dart';
 
 /// All states the "Pesanan" feature can be in. Kept in one hierarchy
@@ -73,6 +74,16 @@ class OrderPaid extends OrderState {
 
   @override
   List<Object?> get props => [order];
+}
+
+class PaymentCheckoutReady extends OrderState {
+  final OrderEntity order;
+  final PaymentCheckout checkout;
+
+  const PaymentCheckoutReady(this.order, this.checkout);
+
+  @override
+  List<Object?> get props => [order, checkout];
 }
 
 class OrderFailure extends OrderState {

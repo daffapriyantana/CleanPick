@@ -1,9 +1,10 @@
-import '../entities/order_entity.dart';
-import '../repositories/order_repository.dart';
+import '../entities/payment_checkout.dart';
+import '../repositories/payment_repository.dart';
 
 class PayOrder {
-  final OrderRepository repository;
+  final PaymentRepository repository;
   const PayOrder(this.repository);
 
-  Future<OrderEntity> call(String orderId) => repository.payOrder(orderId);
+  Future<PaymentCheckout> call(String orderId) =>
+      repository.createCheckout(orderId);
 }

@@ -128,7 +128,7 @@ extension PaymentMethodX on PaymentMethod {
       case PaymentMethod.codTunai:
         return 'COD - Tunai';
       case PaymentMethod.codQris:
-        return 'COD - QRIS';
+        return 'QRIS';
       case PaymentMethod.vaBca:
         return 'Virtual Account BCA';
       case PaymentMethod.vaBni:
@@ -140,6 +140,7 @@ extension PaymentMethodX on PaymentMethod {
     }
   }
 
-  bool get isCod =>
-      this == PaymentMethod.codTunai || this == PaymentMethod.codQris;
+  bool get isCod => this == PaymentMethod.codTunai;
+
+  bool get requiresOnlinePayment => this != PaymentMethod.codTunai;
 }
