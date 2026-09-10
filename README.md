@@ -101,3 +101,24 @@ domain dengan benar.
   diinginkan.
 - Jalankan `flutter pub get`, `flutter analyze`, dan `flutter test` setelah
   mengambil perubahan untuk memverifikasi konfigurasi lokal dan Firebase.
+
+## Push Notification
+
+FCM menyimpan token pada `users/{uid}.fcmToken`. Cloud Functions di folder
+`functions/` mengirim `new_order` ke petugas aktif (`officers.status == aktif`)
+ketika order baru berstatus `menunggu`, lalu mengirim `order_taken` ke customer
+ketika order berubah dari `menunggu` menjadi `diproses` dan memiliki `officerId`.
+
+Untuk memasang backend notification:
+
+```bash
+cd functions
+npm install
+cd ..
+firebase deploy --only functions,firestore:rules
+```
+
+Payload menyertakan `type` dan `orderId`. Aplikasi menangani foreground dengan
+local notification, background melalui FCM, dan terminated melalui pending route
+setelah session dipulihkan. Pastikan Cloud Messaging API aktif, device Android
+13+ mengizinkan notifikasi, dan akun Firebase CLI memiliki izin deploy.

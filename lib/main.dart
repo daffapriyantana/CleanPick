@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 
 import 'firebase_options.dart';
@@ -27,6 +29,9 @@ import 'domain/usecases/register_usecase.dart';
 import 'presentation/bloc/auth/auth_cubit.dart';
 import 'presentation/bloc/order/order_cubit.dart';
 import 'presentation/pages/splash_page.dart';
+import 'presentation/pages/home_page.dart';
+import 'presentation/pages/order_detail_page.dart';
+import 'presentation/pages/petugas_dashboard_page.dart';
 
 /// Manual, lightweight dependency injection. A dedicated container
 /// (get_it, injectable, riverpod, ...) would work equally well here;
@@ -39,16 +44,18 @@ class AppDependencies {
   final FirebaseOrderSyncService orderSyncService;
   final NotificationService notificationService;
 
-  AppDependencies._(
-      {required this.orderRepository,
-      required this.authRepository,
-      required this.orderSyncService,
-      required this.notificationService});
+  AppDependencies._({
+    required this.orderRepository,
+    required this.authRepository,
+    required this.orderSyncService,
+    required this.notificationService,
+  });
 
   static Future<AppDependencies> build() async {
     final orderDataSource = FirebaseOrderDataSource();
-    final orderSyncService =
-        FirebaseOrderSyncService(dataSource: orderDataSource);
+    final orderSyncService = FirebaseOrderSyncService(
+      dataSource: orderDataSource,
+    );
     final authDataSource = FirebaseAuthDataSource();
     await authDataSource.initialize();
     final notificationService = NotificationService();
@@ -61,19 +68,18 @@ class AppDependencies {
     final authRepository = AuthRepositoryImpl(dataSource: authDataSource);
 
     return AppDependencies._(
-        orderRepository: orderRepository,
-        authRepository: authRepository,
-        orderSyncService: orderSyncService,
-        notificationService: notificationService);
+      orderRepository: orderRepository,
+      authRepository: authRepository,
+      orderSyncService: orderSyncService,
+      notificationService: notificationService,
+    );
   }
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await GoogleSignIn.instance.initialize(
     serverClientId:
@@ -82,16 +88,61 @@ Future<void> main() async {
 
   await initializeDateFormatting('id_ID', null);
 
-  runApp(
-    CleanPickApp(
-      dependencies: await AppDependencies.build(),
-    ),
-  );
+  runApp(CleanPickApp(dependencies: await AppDependencies.build()));
 }
 
-class CleanPickApp extends StatelessWidget {
+class CleanPickApp extends StatefulWidget {
   final AppDependencies dependencies;
   const CleanPickApp({super.key, required this.dependencies});
+
+  @override
+  State<CleanPickApp> createState() => _CleanPickAppState();
+}
+
+class _CleanPickAppState extends State<CleanPickApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  StreamSubscription<NotificationRoute>? _routeSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _routeSubscription = widget.dependencies.notificationService.routes.listen(
+      _handleRoute,
+    );
+  }
+
+  @override
+  void dispose() {
+    _routeSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _handleRoute(NotificationRoute route) {
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null || route.orderId == null) return;
+
+    final role = widget.dependencies.authRepository.currentRole;
+    if (route.type == 'new_order' && role == 'petugas') {
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const PetugasDashboardPage(initialTab: 1),
+        ),
+        (route) => false,
+      );
+    } else if (route.type == 'order_taken' && role == 'customer') {
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomePage()),
+        (route) => false,
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => OrderDetailPage(orderId: route.orderId!),
+          ),
+        );
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,31 +150,37 @@ class CleanPickApp extends StatelessWidget {
       providers: [
         BlocProvider<AuthCubit>(
           create: (_) => AuthCubit(
-            loginUseCase: LoginUseCase(dependencies.authRepository),
-            loginPetugasUseCase:
-                LoginPetugasUseCase(dependencies.authRepository),
-            registerUseCase: RegisterUseCase(dependencies.authRepository),
-            registerPetugasUseCase:
-                RegisterPetugasUseCase(dependencies.authRepository),
-            resetPasswordUseCase:
-                ResetPasswordUseCase(dependencies.authRepository),
-            repository: dependencies.authRepository,
-            notificationService: dependencies.notificationService,
+            loginUseCase: LoginUseCase(widget.dependencies.authRepository),
+            loginPetugasUseCase: LoginPetugasUseCase(
+              widget.dependencies.authRepository,
+            ),
+            registerUseCase: RegisterUseCase(
+              widget.dependencies.authRepository,
+            ),
+            registerPetugasUseCase: RegisterPetugasUseCase(
+              widget.dependencies.authRepository,
+            ),
+            resetPasswordUseCase: ResetPasswordUseCase(
+              widget.dependencies.authRepository,
+            ),
+            repository: widget.dependencies.authRepository,
+            notificationService: widget.dependencies.notificationService,
           ),
         ),
         BlocProvider<OrderCubit>(
           create: (_) => OrderCubit(
-            getOrders: GetOrders(dependencies.orderRepository),
-            getOrderDetail: GetOrderDetail(dependencies.orderRepository),
-            createOrder: CreateOrder(dependencies.orderRepository),
-            assignOrder: AssignOrder(dependencies.orderRepository),
-            cancelOrder: CancelOrder(dependencies.orderRepository),
-            payOrder: PayOrder(dependencies.orderRepository),
-            completeOrder: CompleteOrder(dependencies.orderRepository),
+            getOrders: GetOrders(widget.dependencies.orderRepository),
+            getOrderDetail: GetOrderDetail(widget.dependencies.orderRepository),
+            createOrder: CreateOrder(widget.dependencies.orderRepository),
+            assignOrder: AssignOrder(widget.dependencies.orderRepository),
+            cancelOrder: CancelOrder(widget.dependencies.orderRepository),
+            payOrder: PayOrder(widget.dependencies.orderRepository),
+            completeOrder: CompleteOrder(widget.dependencies.orderRepository),
           ),
         ),
       ],
       child: MaterialApp(
+        navigatorKey: _navigatorKey,
         title: 'CleanPick',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
