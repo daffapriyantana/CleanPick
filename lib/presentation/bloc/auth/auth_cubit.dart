@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/error/failures.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../../domain/usecases/login_usecase.dart';
 import '../../../domain/usecases/register_usecase.dart';
@@ -13,6 +14,7 @@ class AuthCubit extends Cubit<AuthState> {
   final RegisterPetugasUseCase registerPetugasUseCase;
   final ResetPasswordUseCase resetPasswordUseCase;
   final AuthRepository repository;
+  final NotificationService? notificationService;
 
   AuthCubit({
     required this.loginUseCase,
@@ -21,7 +23,16 @@ class AuthCubit extends Cubit<AuthState> {
     required this.registerPetugasUseCase,
     required this.resetPasswordUseCase,
     required this.repository,
+    this.notificationService,
   }) : super(const AuthInitial());
+
+  Future<void> _initializeNotifications() async {
+    try {
+      await notificationService?.initialize();
+    } catch (_) {
+      // Notification setup must not block authentication.
+    }
+  }
 
   Future<String?> restoreSession() async {
     final user = repository.currentUser;
@@ -29,6 +40,7 @@ class AuthCubit extends Cubit<AuthState> {
       emit(const AuthLoggedOut());
       return null;
     }
+    await _initializeNotifications();
     emit(AuthSuccess(user));
     return repository.currentRole ?? 'customer';
   }
@@ -37,6 +49,7 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthLoading());
     try {
       final user = await loginUseCase(email: email, password: password);
+      await _initializeNotifications();
       emit(AuthSuccess(user));
     } on Failure catch (e) {
       emit(AuthFailureState(e.message));
@@ -49,6 +62,7 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthLoading());
     try {
       final user = await repository.signInWithGoogle();
+      await _initializeNotifications();
       emit(AuthSuccess(user));
     } on Failure catch (e) {
       emit(AuthFailureState(e.message));
@@ -74,6 +88,7 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthLoading());
     try {
       final user = await loginPetugasUseCase(id: id, password: password);
+      await _initializeNotifications();
       emit(AuthSuccess(user));
     } on Failure catch (e) {
       emit(AuthFailureState(e.message));
@@ -100,6 +115,7 @@ class AuthCubit extends Cubit<AuthState> {
         password: password,
         confirmPassword: confirmPassword,
       );
+      await _initializeNotifications();
       emit(AuthSuccess(user));
     } on Failure catch (e) {
       emit(AuthFailureState(e.message));
@@ -124,6 +140,7 @@ class AuthCubit extends Cubit<AuthState> {
         password: password,
         confirmPassword: confirmPassword,
       );
+      await _initializeNotifications();
       emit(AuthSuccess(user));
     } on Failure catch (e) {
       emit(AuthFailureState(e.message));

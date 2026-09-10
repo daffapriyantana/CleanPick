@@ -12,6 +12,7 @@ import 'data/datasources/firebase_order_datasource.dart';
 import 'data/repositories/auth_repository_impl.dart';
 import 'data/repositories/order_repository_impl.dart';
 import 'data/services/firebase_order_sync_service.dart';
+import 'core/services/notification_service.dart';
 import 'domain/repositories/auth_repository.dart';
 import 'domain/repositories/order_repository.dart';
 import 'domain/usecases/cancel_order.dart';
@@ -36,11 +37,13 @@ class AppDependencies {
   final OrderRepository orderRepository;
   final AuthRepository authRepository;
   final FirebaseOrderSyncService orderSyncService;
+  final NotificationService notificationService;
 
   AppDependencies._(
       {required this.orderRepository,
       required this.authRepository,
-      required this.orderSyncService});
+      required this.orderSyncService,
+      required this.notificationService});
 
   static Future<AppDependencies> build() async {
     final orderDataSource = FirebaseOrderDataSource();
@@ -48,6 +51,10 @@ class AppDependencies {
         FirebaseOrderSyncService(dataSource: orderDataSource);
     final authDataSource = FirebaseAuthDataSource();
     await authDataSource.initialize();
+    final notificationService = NotificationService();
+    if (authDataSource.currentUser != null) {
+      await notificationService.initialize();
+    }
     await orderSyncService.start();
 
     final orderRepository = OrderRepositoryImpl(dataSource: orderDataSource);
@@ -56,7 +63,8 @@ class AppDependencies {
     return AppDependencies._(
         orderRepository: orderRepository,
         authRepository: authRepository,
-        orderSyncService: orderSyncService);
+        orderSyncService: orderSyncService,
+        notificationService: notificationService);
   }
 }
 
@@ -100,6 +108,7 @@ class CleanPickApp extends StatelessWidget {
             resetPasswordUseCase:
                 ResetPasswordUseCase(dependencies.authRepository),
             repository: dependencies.authRepository,
+            notificationService: dependencies.notificationService,
           ),
         ),
         BlocProvider<OrderCubit>(
