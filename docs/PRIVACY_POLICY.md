@@ -1,3 +1,9 @@
+---
+layout: default
+title: CleanPick Privacy Policy
+permalink: /privacy-policy/
+---
+
 # Privacy Policy CleanPick
 
 **Effective date:** 11 September 2026
