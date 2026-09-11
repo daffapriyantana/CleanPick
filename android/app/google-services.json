@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "610958959654-lln0pfd30uegj7epetpu7ovl3k9i852e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.cleanpick",
+            "certificate_hash": "f23e9c661d7d26c99778b406c6371d7981fa6e48"
+          }
+        },
+        {
           "client_id": "610958959654-5qs735nudpm1v70ucfnl2d6dq0jnd8p3.apps.googleusercontent.com",
           "client_type": 3
         }

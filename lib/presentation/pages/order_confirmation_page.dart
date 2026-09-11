@@ -51,17 +51,6 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
   PaymentMethod _paymentMethod = PaymentMethod.codTunai;
   bool _submitting = false;
 
-  String get _vaCode {
-    final bank = switch (_paymentMethod) {
-      PaymentMethod.vaBca => 'BCA',
-      PaymentMethod.vaBni => 'BNI',
-      PaymentMethod.vaBri => 'BRI',
-      PaymentMethod.vaMandiri => 'MANDIRI',
-      _ => '',
-    };
-    return bank.isEmpty ? '' : '8808 1200 2026 ${bank.hashCode.abs() % 10000}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final price = const CalculateOrderPrice().call(
@@ -86,7 +75,7 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
             } else {
               Navigator.of(context)
                   .push(MaterialPageRoute(
-                      builder: (_) => const FindingOfficerPage()))
+                      builder: (_) => FindingOfficerPage(orderId: orderId)))
                   .then((_) {
                 if (context.mounted) {
                   Navigator.of(context).pushReplacement(MaterialPageRoute(
@@ -131,7 +120,7 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
                 initialValue: _paymentMethod,
                 decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.payments_outlined)),
-                items: PaymentMethod.values
+                items: const [PaymentMethod.codTunai, PaymentMethod.transfer]
                     .map((method) => DropdownMenuItem(
                         value: method, child: Text(method.label)))
                     .toList(),
@@ -145,10 +134,11 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
                         style: TextStyle(
                             fontSize: 11, color: AppColors.textSecondary)))
               else
-                Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text('Kode Virtual Account: $_vaCode',
-                        style: const TextStyle(
+                const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Text(
+                        'Anda akan diarahkan ke Midtrans untuk memilih Transfer, QRIS, atau metode lain.',
+                        style: TextStyle(
                             fontSize: 12,
                             color: AppColors.primary,
                             fontWeight: FontWeight.bold))),

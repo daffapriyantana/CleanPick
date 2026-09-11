@@ -68,7 +68,16 @@ class FirebaseOrderDataSource implements OrderLocalDataSource {
       if (!document.exists || document.data() == null) {
         throw ServerException('Pesanan dengan ID $orderId tidak ditemukan');
       }
-      return _fromDocument(document);
+      final order = _fromDocument(document);
+      final payment = await _firestore.collection('payments').doc(orderId).get();
+      final paymentData = payment.data();
+      if (paymentData?['paymentStatus'] == PaymentStatus.lunas.name &&
+          order.paymentStatus != PaymentStatus.lunas) {
+        return OrderModel.fromEntity(
+          order.copyWith(paymentStatus: PaymentStatus.lunas),
+        );
+      }
+      return order;
     } on ServerException {
       rethrow;
     } on FirebaseException catch (e) {

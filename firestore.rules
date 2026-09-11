@@ -81,5 +81,18 @@ service cloud.firestore {
 
       allow delete: if false;
     }
+
+    // Status pembayaran ditulis oleh Midtrans webhook melalui service
+    // account, bukan oleh aplikasi customer.
+    match /payments/{orderId} {
+      allow read: if request.auth != null
+                  && exists(
+                    /databases/$(database)/documents/orders/$(orderId)
+                  )
+                  && get(
+                    /databases/$(database)/documents/orders/$(orderId)
+                  ).data.customerId == request.auth.uid;
+      allow write: if false;
+    }
   }
 }

@@ -75,6 +75,8 @@ class NotificationService {
   StreamSubscription<String>? _tokenRefreshSubscription;
   StreamSubscription<RemoteMessage>? _messageSubscription;
   StreamSubscription<RemoteMessage>? _messageOpenedSubscription;
+  final Map<String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>
+      _orderWatchers = {};
   final StreamController<NotificationRoute> _routeController =
       StreamController<NotificationRoute>.broadcast();
   NotificationRoute? _pendingRoute;
@@ -189,6 +191,84 @@ class NotificationService {
     );
   }
 
+  Future<void> showLoginSuccessNotification() async {
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch.remainder(2147483647),
+      'Login berhasil',
+      'Selamat datang kembali di CleanPick.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          cleanPickNotificationChannelId,
+          'Notifikasi CleanPick',
+          channelDescription: 'Notifikasi status pesanan CleanPick',
+          importance: Importance.max,
+          priority: Priority.max,
+          playSound: true,
+          icon: '@mipmap/ic_launcher',
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+    );
+  }
+
+  Future<void> watchOrderAssignment(String orderId) async {
+    if (_orderWatchers.containsKey(orderId)) return;
+    const notificationId = 70101;
+    await _localNotifications.show(
+      notificationId,
+      'Mencari petugas',
+      'CleanPick sedang mencari petugas untuk pesanan Anda.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          cleanPickNotificationChannelId,
+          'Notifikasi CleanPick',
+          channelDescription: 'Notifikasi status pesanan CleanPick',
+          importance: Importance.low,
+          priority: Priority.low,
+          ongoing: true,
+          onlyAlertOnce: true,
+          icon: '@mipmap/ic_launcher',
+        ),
+      ),
+    );
+    _orderWatchers[orderId] = _firestore
+        .collection('orders')
+        .doc(orderId)
+        .snapshots()
+        .listen((snapshot) {
+      final data = snapshot.data();
+      final assigned = data?['status'] == 'diproses' &&
+          data?['officerId']?.toString().isNotEmpty == true;
+      if (!assigned) return;
+      unawaited(_localNotifications.cancel(notificationId));
+      unawaited(_localNotifications.show(
+        notificationId,
+        'Petugas ditemukan',
+        'Petugas sudah menerima pesanan Anda.',
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            cleanPickNotificationChannelId,
+            'Notifikasi CleanPick',
+            channelDescription: 'Notifikasi status pesanan CleanPick',
+            importance: Importance.max,
+            priority: Priority.max,
+            icon: '@mipmap/ic_launcher',
+          ),
+        ),
+        payload: jsonEncode({'type': 'order_taken', 'orderId': orderId}),
+      ));
+      unawaited(stopWatchingOrderAssignment(orderId));
+    });
+  }
+
+  Future<void> stopWatchingOrderAssignment(String orderId) async {
+    await _orderWatchers.remove(orderId)?.cancel();
+  }
+
   void _emitRouteFromMessage(RemoteMessage message) {
     _emitRoute(NotificationRoute.fromData(message.data));
   }
@@ -213,6 +293,7 @@ class NotificationService {
 
     await _firestore.collection('users').doc(user.uid).set({
       'fcmToken': token,
+      'fcmTokens': FieldValue.arrayUnion([token]),
     }, SetOptions(merge: true));
     debugPrint('FCM Token berhasil disimpan ke Firestore');
   }
@@ -221,6 +302,10 @@ class NotificationService {
     await _tokenRefreshSubscription?.cancel();
     await _messageSubscription?.cancel();
     await _messageOpenedSubscription?.cancel();
+    for (final watcher in _orderWatchers.values) {
+      await watcher.cancel();
+    }
+    _orderWatchers.clear();
     await _routeController.close();
   }
 }

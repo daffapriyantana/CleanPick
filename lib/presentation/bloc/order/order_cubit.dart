@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
+import '../../../domain/repositories/payment_repository.dart';
 import '../../../domain/usecases/calculate_order_price.dart';
 import '../../../domain/usecases/cancel_order.dart';
 import '../../../domain/usecases/assign_order.dart';
@@ -24,6 +25,7 @@ class OrderCubit extends Cubit<OrderState> {
   final CreateOrder createOrder;
   final CancelOrder cancelOrder;
   final PayOrder payOrder;
+  final PaymentRepository paymentRepository;
   final AssignOrder assignOrder;
   final CompleteOrder completeOrder;
   final CalculateOrderPrice calculatePrice;
@@ -34,6 +36,7 @@ class OrderCubit extends Cubit<OrderState> {
     required this.createOrder,
     required this.cancelOrder,
     required this.payOrder,
+    required this.paymentRepository,
     required this.assignOrder,
     required this.completeOrder,
     CalculateOrderPrice? calculatePrice,
@@ -197,6 +200,14 @@ class OrderCubit extends Cubit<OrderState> {
       emit(OrderFailure(e.message));
     } catch (e) {
       emit(OrderFailure('Gagal memproses pembayaran: $e'));
+    }
+  }
+
+  Future<void> refreshPaymentStatus(String orderId) async {
+    try {
+      await paymentRepository.refreshPaymentStatus(orderId);
+    } on Failure {
+      // The webhook may still be processing; the detail refresh remains useful.
     }
   }
 }

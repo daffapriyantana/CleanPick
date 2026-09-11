@@ -28,6 +28,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
     with WidgetsBindingObserver {
   PaymentMethod? _selectedPaymentMethod;
   bool _checkoutOpened = false;
+  bool _paymentRefreshInProgress = false;
   @override
   void initState() {
     super.initState();
@@ -44,8 +45,44 @@ class _OrderDetailPageState extends State<OrderDetailPage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _checkoutOpened && mounted) {
+      _refreshAfterCheckout();
+    }
+  }
+
+  Future<void> _refreshAfterCheckout() async {
+    if (_paymentRefreshInProgress || !mounted) return;
+    _paymentRefreshInProgress = true;
+    final orderCubit = context.read<OrderCubit>();
+
+    try {
+      // Android can report resumed while the external browser is still
+      // handing control back to the app. Give Midtrans time to finish first.
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+      var paid = false;
+      for (var attempt = 0; attempt < 10 && mounted; attempt++) {
+        await orderCubit.refreshPaymentStatus(widget.orderId);
+        await orderCubit.loadOrderDetail(widget.orderId);
+        final state = orderCubit.state;
+        if (state is OrderDetailLoaded &&
+            state.order.paymentStatus == PaymentStatus.lunas) {
+          paid = true;
+          break;
+        }
+        await Future<void>.delayed(const Duration(seconds: 2));
+      }
+
       _checkoutOpened = false;
-      context.read<OrderCubit>().loadOrderDetail(widget.orderId);
+      if (mounted && !paid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Pembayaran belum terkonfirmasi. Tekan bayar lagi untuk memeriksa ulang.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      _paymentRefreshInProgress = false;
     }
   }
 
@@ -365,11 +402,22 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              if (order.paymentMethod != PaymentMethod.codQris) ...[
+              if (order.paymentMethod != PaymentMethod.codQris &&
+                  order.paymentMethod != PaymentMethod.transfer) ...[
                 const SizedBox(height: 4),
                 Text(
                   'Kode Virtual Account: ${_virtualAccount(order)}',
                   style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+              if (order.paymentMethod == PaymentMethod.transfer) ...[
+                const SizedBox(height: 4),
+                const Text(
+                  'Pembayaran akan diproses melalui Midtrans.',
+                  style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
                   ),
@@ -392,7 +440,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                 child: ElevatedButton.icon(
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const FindingOfficerPage(),
+                      builder: (_) => FindingOfficerPage(orderId: order.id),
                     ),
                   ),
                   icon: const Icon(Icons.search),

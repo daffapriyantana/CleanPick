@@ -12,7 +12,12 @@ abstract class PaymentDataSource {
   Future<PaymentCheckout> createCheckout(String orderId);
 }
 
-class SupabasePaymentDataSource implements PaymentDataSource {
+abstract class PaymentStatusDataSource {
+  Future<void> refreshPaymentStatus(String orderId);
+}
+
+class SupabasePaymentDataSource
+    implements PaymentDataSource, PaymentStatusDataSource {
   final FirebaseAuth _auth;
   final http.Client _client;
   final Connectivity _connectivity;
@@ -101,6 +106,39 @@ class SupabasePaymentDataSource implements PaymentDataSource {
       snapToken: snapToken,
       redirectUrl: redirectUrl,
     );
+  }
+
+  @override
+  Future<void> refreshPaymentStatus(String orderId) async {
+    final user = _auth.currentUser;
+    if (user == null) throw const ServerException('Pengguna belum login');
+    final token = await user.getIdToken(true);
+    if (token == null || token.isEmpty) {
+      throw const ServerException('Token Firebase tidak tersedia');
+    }
+    try {
+      final response = await _client
+          .post(
+            Uri.parse(_functionUrl),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({'orderId': orderId, 'action': 'verify'}),
+          )
+          .timeout(const Duration(seconds: 30));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw const ServerException(
+          'Status pembayaran belum dapat diverifikasi',
+        );
+      }
+    } on TimeoutException {
+      throw const ServerException('Backend pembayaran tidak merespons');
+    } on http.ClientException {
+      throw const ServerException(
+        'Tidak dapat terhubung ke backend pembayaran',
+      );
+    }
   }
 
   String _paymentErrorMessage({

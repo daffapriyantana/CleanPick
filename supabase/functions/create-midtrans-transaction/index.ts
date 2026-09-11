@@ -27,6 +27,7 @@ Deno.serve(async (request) => {
     }
     const body = await request.json();
     const orderId = body.orderId?.toString();
+    const action = body.action?.toString();
     if (!orderId || !/^[A-Za-z0-9_-]{1,64}$/.test(orderId)) {
       return json({ error: 'orderId tidak valid' }, 400);
     }
@@ -40,6 +41,48 @@ Deno.serve(async (request) => {
     const grossAmount = Number(order.totalPrice);
     if (!Number.isSafeInteger(grossAmount) || grossAmount <= 0) {
       return json({ error: 'Nominal pesanan tidak valid' }, 422);
+    }
+
+    if (action === 'verify') {
+      const serverKey = Deno.env.get('MIDTRANS_SERVER_KEY');
+      if (!serverKey) throw new Error('Midtrans secret is not configured');
+      const statusResponse = await fetch(
+        `https://api.sandbox.midtrans.com/v2/${encodeURIComponent(orderId)}/status`,
+        {
+          headers: {
+            Authorization: `Basic ${btoa(`${serverKey}:`)}`,
+            Accept: 'application/json',
+          },
+        },
+      );
+      const status = await statusResponse.json();
+      if (!statusResponse.ok) {
+        return json({ error: 'Status transaksi Midtrans belum tersedia' }, 502);
+      }
+
+      const transactionStatus = status.transaction_status?.toString().toLowerCase();
+      const fraudStatus = status.fraud_status?.toString().toLowerCase() ?? '';
+      const paid = transactionStatus === 'settlement' ||
+        (transactionStatus === 'capture' && fraudStatus === 'accept');
+      const paymentStatus = paid ? 'lunas' : 'belumBayar';
+      const now = new Date().toISOString();
+      await firestorePatch(`payments/${encodeURIComponent(orderId)}`, {
+        orderId,
+        amount: grossAmount,
+        paymentStatus,
+        transactionStatus: transactionStatus ?? 'unknown',
+        fraudStatus,
+        transactionId: status.transaction_id?.toString() ?? '',
+        statusCode: status.status_code?.toString() ?? '',
+        lastNotificationAt: now,
+        updatedAt: now,
+      });
+      if (paid) {
+        await firestorePatch(`orders/${encodeURIComponent(orderId)}`, {
+          paymentStatus: 'lunas',
+        });
+      }
+      return json({ ok: true, paymentStatus });
     }
 
     const existing = await firestoreGet(`payments/${encodeURIComponent(orderId)}`);

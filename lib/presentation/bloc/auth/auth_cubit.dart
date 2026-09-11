@@ -50,6 +50,7 @@ class AuthCubit extends Cubit<AuthState> {
     try {
       final user = await loginUseCase(email: email, password: password);
       await _initializeNotifications();
+      await notificationService?.showLoginSuccessNotification();
       emit(AuthSuccess(user));
     } on Failure catch (e) {
       emit(AuthFailureState(e.message));
@@ -63,6 +64,7 @@ class AuthCubit extends Cubit<AuthState> {
     try {
       final user = await repository.signInWithGoogle();
       await _initializeNotifications();
+      await notificationService?.showLoginSuccessNotification();
       emit(AuthSuccess(user));
     } on Failure catch (e) {
       emit(AuthFailureState(e.message));
@@ -89,6 +91,7 @@ class AuthCubit extends Cubit<AuthState> {
     try {
       final user = await loginPetugasUseCase(id: id, password: password);
       await _initializeNotifications();
+      await notificationService?.showLoginSuccessNotification();
       emit(AuthSuccess(user));
     } on Failure catch (e) {
       emit(AuthFailureState(e.message));

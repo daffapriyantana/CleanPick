@@ -120,7 +120,8 @@ extension PaymentStatusX on PaymentStatus {
   String get label => this == PaymentStatus.lunas ? 'Lunas' : 'Belum Bayar';
 }
 
-enum PaymentMethod { codTunai, codQris, vaBca, vaBni, vaBri, vaMandiri }
+// Keep the original values stable so existing orders remain readable.
+enum PaymentMethod { codTunai, codQris, vaBca, vaBni, vaBri, vaMandiri, transfer }
 
 extension PaymentMethodX on PaymentMethod {
   String get label {
@@ -137,6 +138,8 @@ extension PaymentMethodX on PaymentMethod {
         return 'Virtual Account BRI';
       case PaymentMethod.vaMandiri:
         return 'Virtual Account Mandiri';
+      case PaymentMethod.transfer:
+        return 'Transfer / QRIS (Midtrans)';
     }
   }
 

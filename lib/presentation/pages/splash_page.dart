@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../core/services/notification_service.dart';
 import '../bloc/auth/auth_cubit.dart';
 import 'home_page.dart';
 import 'login_page.dart';
@@ -41,7 +40,11 @@ class _SplashPageState extends State<SplashPage> {
       return;
     }
 
-    if (pendingRoute?.type == 'order_taken' &&
+    if ((pendingRoute?.type == 'order_taken' ||
+            pendingRoute?.type == 'officer_found' ||
+            pendingRoute?.type == 'order_status' ||
+            pendingRoute?.type == 'payment_success' ||
+            pendingRoute?.type == 'payment_failed') &&
         pendingRoute?.orderId != null &&
         role == 'customer') {
       navigator.pushReplacement(
@@ -62,8 +65,8 @@ class _SplashPageState extends State<SplashPage> {
         builder: (_) => role == 'petugas'
             ? const PetugasDashboardPage()
             : role == null
-            ? const LoginPage()
-            : const HomePage(),
+                ? const LoginPage()
+                : const HomePage(),
       ),
     );
   }

@@ -149,8 +149,8 @@ function validateNotification(value: unknown):
   const statusCode = text(body.status_code);
   const grossAmount = text(body.gross_amount);
   const signature = text(body.signature_key);
-  const transactionStatus = text(body.transaction_status);
-  const fraudStatus = text(body.fraud_status);
+  const transactionStatus = text(body.transaction_status).toLowerCase();
+  const fraudStatus = text(body.fraud_status).toLowerCase();
   const transactionId = text(body.transaction_id);
 
   if (!orderId || !/^[A-Za-z0-9_-]{1,64}$/.test(orderId)) {

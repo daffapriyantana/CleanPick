@@ -16,4 +16,15 @@ class PaymentRepositoryImpl implements PaymentRepository {
       throw ServerFailure(e.message);
     }
   }
+
+  @override
+  Future<void> refreshPaymentStatus(String orderId) async {
+    try {
+      if (dataSource is! PaymentStatusDataSource) return;
+      await (dataSource as PaymentStatusDataSource)
+          .refreshPaymentStatus(orderId);
+    } on ServerException catch (e) {
+      throw ServerFailure(e.message);
+    }
+  }
 }

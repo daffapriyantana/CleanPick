@@ -56,9 +56,12 @@ class _PetugasOrdersViewState extends State<PetugasOrdersView> {
             final auth = context.read<AuthCubit>().state;
             final officerId = auth is AuthSuccess ? auth.user.id : null;
             final hasActiveTask = state.orders.any((order) =>
-              order.officerId == officerId &&
-              order.status == OrderStatus.diproses);
+                order.officerId == officerId &&
+                order.status == OrderStatus.diproses);
             final orders = state.orders
+                .where((order) =>
+                    order.paymentMethod.isCod ||
+                    order.paymentStatus == PaymentStatus.lunas)
                 .where((order) => _showCompleted
                     ? order.status == OrderStatus.selesai &&
                         order.officerId == officerId
@@ -85,16 +88,16 @@ class _PetugasOrdersViewState extends State<PetugasOrdersView> {
                 itemBuilder: (_, index) => _OrderCard(
                   order: orders[index],
                   onDetails: () => _openDetails(orders[index]),
-                    onTake: orders[index].status == OrderStatus.menunggu
-                        ? () {
-                            if (hasActiveTask) {
-                              widget.onMessage(
-                                  'Selesaikan tugas aktif sebelum mengambil order lain.');
-                            } else {
-                              _take(orders[index]);
-                            }
+                  onTake: orders[index].status == OrderStatus.menunggu
+                      ? () {
+                          if (hasActiveTask) {
+                            widget.onMessage(
+                                'Selesaikan tugas aktif sebelum mengambil order lain.');
+                          } else {
+                            _take(orders[index]);
                           }
-                        : null,
+                        }
+                      : null,
                   onComplete: orders[index].status == OrderStatus.diproses
                       ? () =>
                           context.read<OrderCubit>().complete(orders[index].id)

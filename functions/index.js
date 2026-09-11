@@ -21,18 +21,20 @@ async function claimNotification(eventKey) {
 }
 
 async function getTokensForActiveOfficers() {
-  const officers = await db.collection('officers').where('status', '==', 'aktif').get();
+  const officers = await db.collection('users').where('role', '==', 'petugas').get();
   const tokens = [];
 
   for (const officer of officers.docs) {
-    const data = officer.data();
-    const uid = data.uid || data.officerId || data.officerid || officer.id;
-    const profile = await db.collection('users').doc(uid).get();
-    const token = profile.data()?.fcmToken;
-    if (typeof token === 'string' && token.trim()) tokens.push(token);
+    tokens.push(...tokensFromProfile(officer.data()));
   }
 
   return [...new Set(tokens)];
+}
+
+function tokensFromProfile(profile) {
+  const tokens = Array.isArray(profile.fcmTokens) ? profile.fcmTokens : [];
+  if (typeof profile.fcmToken === 'string') tokens.push(profile.fcmToken);
+  return tokens.filter((token) => typeof token === 'string' && token.trim());
 }
 
 async function sendToTokens(tokens, title, body, data) {
@@ -57,6 +59,7 @@ exports.notifyOfficersOnOrderCreated = onDocumentCreated('orders/{orderId}', asy
 
   const order = snapshot.data();
   if (order.status !== 'menunggu') return;
+  if (order.paymentMethod !== 'codTunai' && order.paymentStatus !== 'lunas') return;
 
   const claimed = await claimNotification(`new_order_${event.id}`);
   if (!claimed) return;
@@ -86,11 +89,11 @@ exports.notifyCustomerOnOrderTaken = onDocumentUpdated('orders/{orderId}', async
   if (!claimed || typeof after.customerId !== 'string') return;
 
   const customer = await db.collection('users').doc(after.customerId).get();
-  const token = customer.data()?.fcmToken;
-  if (typeof token !== 'string' || !token.trim()) return;
+  const tokens = tokensFromProfile(customer.data() || {});
+  if (tokens.length === 0) return;
 
   await sendToTokens(
-    [token],
+    tokens,
     'Pesanan Diambil Petugas',
     'Pesanan Anda telah diambil oleh petugas.',
     {
@@ -98,4 +101,71 @@ exports.notifyCustomerOnOrderTaken = onDocumentUpdated('orders/{orderId}', async
       orderId: event.params.orderId,
     },
   );
+});
+
+exports.notifyCustomerOnOrderStatusChanged = onDocumentUpdated('orders/{orderId}', async (event) => {
+  const before = event.data?.before.data();
+  const after = event.data?.after.data();
+  if (!before || !after || before.status === after.status) return;
+  if (after.status === 'diproses') return;
+  if (typeof after.customerId !== 'string') return;
+
+  const claimed = await claimNotification(`order_status_${event.id}`);
+  if (!claimed) return;
+  const customer = await db.collection('users').doc(after.customerId).get();
+  const tokens = tokensFromProfile(customer.data() || {});
+  if (tokens.length === 0) return;
+
+  const labels = {
+    menunggu: 'Menunggu petugas',
+    dijadwalkan: 'Pesanan dijadwalkan',
+    selesai: 'Pesanan selesai',
+    dibatalkan: 'Pesanan dibatalkan',
+  };
+  const label = labels[after.status] || 'Status pesanan berubah';
+  await sendToTokens(tokens, 'Status Pesanan Diperbarui', label, {
+    type: 'order_status',
+    orderId: event.params.orderId,
+    status: after.status,
+  });
+});
+
+exports.notifyCustomerOnPaymentUpdated = onDocumentUpdated('payments/{orderId}', async (event) => {
+  const before = event.data?.before.data();
+  const after = event.data?.after.data();
+  if (!before || !after || before.paymentStatus === after.paymentStatus) return;
+  if (after.paymentStatus !== 'lunas' && after.paymentStatus !== 'belumBayar') return;
+
+  const order = await db.collection('orders').doc(event.params.orderId).get();
+  const orderData = order.data() || {};
+  const customerId = orderData.customerId;
+  if (typeof customerId !== 'string') return;
+  const claimed = await claimNotification(`payment_status_${event.id}`);
+  if (!claimed) return;
+  const customer = await db.collection('users').doc(customerId).get();
+  const tokens = tokensFromProfile(customer.data() || {});
+
+  const paid = after.paymentStatus === 'lunas';
+  if (tokens.length > 0) {
+    await sendToTokens(
+      tokens,
+      paid ? 'Pembayaran Berhasil' : 'Status Pembayaran',
+      paid ? 'Pembayaran pesanan Anda berhasil.' : 'Pembayaran pesanan belum berhasil.',
+      { type: paid ? 'payment_success' : 'payment_failed', orderId: event.params.orderId },
+    );
+  }
+
+  if (paid && orderData.paymentMethod !== 'codTunai') {
+    const officerClaimed = await claimNotification(
+      `paid_order_officers_${event.params.orderId}_${event.id}`,
+    );
+    if (!officerClaimed) return;
+    const officerTokens = await getTokensForActiveOfficers();
+    await sendToTokens(
+      officerTokens,
+      'Pesanan Siap Diambil',
+      'Pembayaran berhasil. Pesanan baru tersedia untuk diproses.',
+      { type: 'new_order', orderId: event.params.orderId },
+    );
+  }
 });

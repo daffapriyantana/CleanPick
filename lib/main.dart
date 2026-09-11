@@ -138,7 +138,12 @@ class _CleanPickAppState extends State<CleanPickApp> {
         ),
         (route) => false,
       );
-    } else if (route.type == 'order_taken' && role == 'customer') {
+    } else if ((route.type == 'order_taken' ||
+            route.type == 'officer_found' ||
+            route.type == 'order_status' ||
+            route.type == 'payment_success' ||
+            route.type == 'payment_failed') &&
+        role == 'customer') {
       navigator.pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomePage()),
         (route) => false,
@@ -184,6 +189,7 @@ class _CleanPickAppState extends State<CleanPickApp> {
             assignOrder: AssignOrder(widget.dependencies.orderRepository),
             cancelOrder: CancelOrder(widget.dependencies.orderRepository),
             payOrder: PayOrder(widget.dependencies.paymentRepository),
+            paymentRepository: widget.dependencies.paymentRepository,
             completeOrder: CompleteOrder(widget.dependencies.orderRepository),
           ),
         ),
